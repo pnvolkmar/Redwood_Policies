@@ -600,21 +600,21 @@ function SupplyPolicy(db)
   transport = Select(ES, "Transport")
   row = Select(Area, "ROW")
   yr2050 = Select(Year, "2050")
-  loc1 = EIGoalCFS[electric,transport,row,yr2050]
-  loc2 = 1
-  print("\nEIGoalCFS[electric,transport,row,yr2050] = ")
-  print(loc1)
-  print(" Iter No: ")
-  print(loc2)
+  # loc1 = EIGoalCFS[electric,transport,row,yr2050]
+  # loc2 = 1
+  # print("\nEIGoalCFS[electric,transport,row,yr2050] = ")
+  # print(loc1)
+  # print(" Iter No: ")
+  # print(loc2)
   for year in Years, area in areas, es in ESs, fuel in Fuels
     EIGoalCFS[fuel,es,area,year] = 0
   end
-  loc1 = EIGoalCFS[electric,transport,row,yr2050]
-  loc2 += 1
-  print("\nEIGoalCFS[electric,transport,row,yr2050] = ")
-  print(loc1)
-  print(" Iter No: ")
-  print(loc2)
+  # loc1 = EIGoalCFS[electric,transport,row,yr2050]
+  # loc2 += 1
+  # print("\nEIGoalCFS[electric,transport,row,yr2050] = ")
+  # print(loc1)
+  # print(" Iter No: ")
+  # print(loc2)
 
   #
   # Fossil Fuels (which are not Low Carbon Fuels)
@@ -623,12 +623,12 @@ function SupplyPolicy(db)
   for year in Years, area in areas, es in ESs, fuel in fuels
     EIGoalCFS[fuel,es,area,year] = EIOfficial[fuel,area,year]-EIReduction[market,year]
   end
-  loc1 = EIGoalCFS[electric,transport,row,yr2050]
-  loc2 += 1
-  print("\nEIGoalCFS[electric,transport,row,yr2050] = ")
-  print(loc1)
-  print(" Iter No: ")
-  print(loc2)
+  # loc1 = EIGoalCFS[electric,transport,row,yr2050]
+  # loc2 += 1
+  # print("\nEIGoalCFS[electric,transport,row,yr2050] = ")
+  # print(loc1)
+  # print(" Iter No: ")
+  # print(loc2)
 
   #
   # Low Carbon Fuels (including Low Carbon Fossil Fuels)
@@ -637,12 +637,12 @@ function SupplyPolicy(db)
   for year in Years, area in areas, es in ESs, fuel in fuels
     EIGoalCFS[fuel,es,area,year] = EIStreamCredit[market,year]
   end
-  loc1 = EIGoalCFS[electric,transport,row,yr2050]
-  loc2 += 1
-  print("\nEIGoalCFS[electric,transport,row,yr2050] = ")
-  print(loc1)
-  print(" Iter No: ")
-  print(loc2)
+  # loc1 = EIGoalCFS[electric,transport,row,yr2050]
+  # loc2 += 1
+  # print("\nEIGoalCFS[electric,transport,row,yr2050] = ")
+  # print(loc1)
+  # print(" Iter No: ")
+  # print(loc2)
 
   #
   # Gaseous Stream is based on Natural Gas
@@ -651,12 +651,12 @@ function SupplyPolicy(db)
   for year in Years, area in areas, es in ESs, fuel in fuels
     EIGoalCFS[fuel,es,area,year] = EIOfficial[Select(Fuel,"NaturalGas"),area,year]
   end
-  loc1 = EIGoalCFS[electric,transport,row,yr2050]
-  loc2 += 1
-  print("\nEIGoalCFS[electric,transport,row,yr2050] = ")
-  print(loc1)
-  print(" Iter No: ")
-  print(loc2)
+  # loc1 = EIGoalCFS[electric,transport,row,yr2050]
+  # loc2 += 1
+  # print("\nEIGoalCFS[electric,transport,row,yr2050] = ")
+  # print(loc1)
+  # print(" Iter No: ")
+  # print(loc2)
 
   WriteDisk(db,"SInput/EIGoalCFS", EIGoalCFS)
 
@@ -728,10 +728,6 @@ function SupplyPolicy(db)
   # 2.0x - Hydrogen fuel cell vehicles for light- and medium-duty applications (replacing gasoline)      
   # 1.9x - Hydrogen fuel cell vehicles for on-road heavy-duty applications and off-road vehicles (replacing diesel)
   #
-  # Note, after a DBClose, CloseDB, all sets are reset
-  # 
-  
-  # areas = Areas
   
   for year in Years, area in areas, ec in ECs, tech in Techs, fuel in Fuels, enduse in Enduses 
     EICreditMult[enduse,fuel,tech,ec,area,year] = 1.0
@@ -822,12 +818,12 @@ function SupplyPolicy(db)
   
   WriteDisk(db,"$Input/EICreditMult",EICreditMult)
   
-  loc1 = EIGoalCFS[electric,transport,row,yr2050]
-  loc2 += 1
-  print("\nEIGoalCFS[electric,transport,row,yr2050] = ")
-  print(loc1)
-  print(" Iter No: ")
-  print(loc2)
+  # loc1 = EIGoalCFS[electric,transport,row,yr2050]
+  # loc2 += 1
+  # print("\nEIGoalCFS[electric,transport,row,yr2050] = ")
+  # print(loc1)
+  # print(" Iter No: ")
+  # print(loc2)
 
   es = Select(ES,"Transport")
   for year in years, area in areas, ec in ECs, tech in Techs, fuel in Fuels, enduse in Enduses
@@ -841,12 +837,12 @@ function SupplyPolicy(db)
   end
   WriteDisk(db,"$Outpt/EIGoal",EIGoal)
   
-  loc1 = EIGoalCFS[electric,transport,row,yr2050]
-  loc2 += 1
-  print("\nEIGoalCFS[electric,transport,row,yr2050] = ")
-  print(loc1)
-  print(" Iter No: ")
-  print(loc2)
+  # loc1 = EIGoalCFS[electric,transport,row,yr2050]
+  # loc2 += 1
+  # print("\nEIGoalCFS[electric,transport,row,yr2050] = ")
+  # print(loc1)
+  # print(" Iter No: ")
+  # print(loc2)
 
 
   for year in years, area in areas, fuel in fuels
@@ -857,21 +853,21 @@ function SupplyPolicy(db)
             sum(DmdFuelTechRef[enduse,fuel,tech,ec,area,year] for ec in ECs,
               tech in Techs,enduse in Enduses)
   end
-  loc1 = EIGoalCFS[electric,transport,row,yr2050]
-  loc2 += 1
-  print("\nEIGoalCFS[electric,transport,row,yr2050] = ")
-  print(loc1)
-  print(" Iter No: ")
-  print(loc2)
+  # loc1 = EIGoalCFS[electric,transport,row,yr2050]
+  # loc2 += 1
+  # print("\nEIGoalCFS[electric,transport,row,yr2050] = ")
+  # print(loc1)
+  # print(" Iter No: ")
+  # print(loc2)
 
   WriteDisk(db,"SInput/EIGoalCFS", EIGoalCFS)
   
-  loc1 = EIGoalCFS[electric,transport,row,yr2050]
-  loc2 += 1
-  print("\nEIGoalCFS[electric,transport,row,yr2050] = ")
-  print(loc1)
-  print(" Iter No: ")
-  print(loc2)
+  # loc1 = EIGoalCFS[electric,transport,row,yr2050]
+  # loc2 += 1
+  # print("\nEIGoalCFS[electric,transport,row,yr2050] = ")
+  # print(loc1)
+  # print(" Iter No: ")
+  # print(loc2)
 
   #########################
   #
