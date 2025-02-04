@@ -798,12 +798,7 @@ function SupplyPolicy(db)
     #2022 2023 2024 2025 2026 2027 2028 2029 2030 2031 2032 2033 2034 2035
      0.38 0.41 0.43 0.46 0.48 0.51 0.53 0.56 0.58 0.54 0.49 0.43 0.36 0.28
   ]
-  for year in years_mult
-    print("\nYear: ")
-    print(Year[year])
-    print(" MultMult: ")
-    print(EICreditMultMult[year])
-  end
+
   years = collect(Yr(2036):Yr(2050))
   for year in years
     EICreditMultMult[year] = EICreditMultMult[Yr(2035)]
