@@ -50,9 +50,9 @@ function MacroPolicy(db)
   
   area = Select(Area,"SK")     
   HeavyOilMining = Select(ECC,"HeavyOilMining")
-  years = collect(Yr(2022):Yr(2026)) 
+  years = collect(Yr(2023):Yr(2030)) 
   for year in years
-   xSqPrice[HeavyOilMining,area,year] = 235/xInflation[area,Yr(2016)]
+   xSqPrice[HeavyOilMining,area,year] = 181/xInflation[area,Yr(2016)]
   end
 
   WriteDisk(db,"MEInput/xSqPrice",xSqPrice)

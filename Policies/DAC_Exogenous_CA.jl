@@ -88,12 +88,12 @@ function SupplyPolicy(db)
   #
   # Hydrogen only in California
   #
-  dactechs = Select(DACTech,["LiquidNG","SolidNG"])
+  dactechs = Select(DACTech)
   for year in Years, dactech in dactechs
     DACMSM0[dactech,CA,year] = -10.0
   end
 
-  dactechs = Select(DACTech,["LiquidH2","SolidH2"])
+  dactechs = Select(DACTech,"KOHLoop")
   for year in Years, dactech in dactechs
     DACMSM0[dactech,CA,year] =   0.0
   end

@@ -1,6 +1,8 @@
 #
 # Electricity_ITCs.jl
 #
+# Ref24 - Updated with the Ref23AshCER version, removed impacts to the last historical year 2022 - RST 06Aug2024
+#
 
 using SmallModel
 
@@ -57,17 +59,19 @@ function ElecPolicy(db)
   # 4. Clean Technology (FES 2022 / Budget 2023)
   # RST 31May2023
   # 
-
+  # v2: Updated after alignment exercise with NextGrid, as well as add in Biomass (Waste) eligiblity for the CT/CE ITCs from FES 2023 - RST 11Jan2024
   # 
   # GCCCN Modification
   # CCUS ITC : Target CCS plant types,assume an average of 50% ITC applied on 
   # the CCS-portion of the Plant,
   # Full Rate 2022-2030,Half Rate 2031-2040,ITC gone in 2041 onward.  
   # Also assume that 50% of the total cost of the CCS Electric Unit is CCS-related equipment.
-  # 
-  areas = Select(Area,["AB","BC","MB","ON","QC","SK","NS","NL","NB","PE","YT","NT","NU"])
+  #
+  # Area coverage: BC/AB/SK (NextGrid Alignment)
+  #
+  areas = Select(Area,["AB","BC","SK"])
   plants = Select(Plant,["NGCCS","CoalCCS","BiomassCCS"])
-  years = collect(Yr(2022):Yr(2030))
+  years = collect(Yr(2023):Yr(2030))
   for year in years, area in areas, plant in plants
     Reduction[plant,area,year] = Reduction[plant,area,year] + 0.5*0.5
   end
@@ -75,13 +79,17 @@ function ElecPolicy(db)
   for year in years, area in areas, plant in plants
     Reduction[plant,area,year] = Reduction[plant,area,year] + 0.25*0.5
   end
-
   # 
   # Clean Technology ITC : Target non-emitting plant types,assume all units are private-owned 
   # (so Units can claim the Clean Tech rate (30%) rather than the lower Clean Electricity rate (15%),
   # Full Rate 2023-2033,Half Rate 2034,ITC gone in 2035 onward.
   #
-  plants = Select(Plant,["FuelCell","OtherStorage","Nuclear","BaseHydro","PeakHydro","PumpedHydro","SmallHydro","OnshoreWind","OffshoreWind","SolarPV","SolarThermal","Geothermal","Wave","Tidal"])
+  # Only let PeakHydro be eligible for CE ITC (NextGrid Alignment)
+  #
+  # Add Biomass (50% of BiomassCCS) and Waste eligible (FES 2023)
+  #
+  areas = Select(Area, ["AB","BC","MB","ON","QC","SK","NS","NL","NB","PE","YT","NT","NU"])
+  plants = Select(Plant,["FuelCell","Battery","Nuclear","SMNR","BaseHydro","PumpedHydro","SmallHydro","OnshoreWind","OffshoreWind","SolarPV","SolarThermal","Geothermal","Wave","Tidal","Biomass","Waste"])
   years = collect(Yr(2023):Yr(2033))
   for year in years, area in areas, plant in plants
     Reduction[plant,area,year] = Reduction[plant,area,year] + 0.3
@@ -99,6 +107,17 @@ function ElecPolicy(db)
   for year in years, area in areas
     Reduction[NGCCS,area,year] = Reduction[NGCCS,area,year] + 0.15
   end
+  # 
+  plants = Select(Plant,"BiomassCCS")
+  years = collect(Yr(2023):Yr(2030))
+  for year in years, area in areas, plant in plants
+    Reduction[plant,area,year] = Reduction[plant,area,year] + 0.3*0.5
+  end
+  years = collect(Yr(2031):Yr(2040))
+  for year in years, area in areas, plant in plants
+    Reduction[plant,area,year] = Reduction[plant,area,year] + 0.25*0.5
+  end
+
 
   # 
   # Atlantic ITCs : Target all units types, 10% Rate,Coverage for Atlantic provinces,

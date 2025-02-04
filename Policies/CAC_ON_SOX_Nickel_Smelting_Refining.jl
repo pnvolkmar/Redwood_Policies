@@ -2,7 +2,7 @@
 # CAC_ON_SOX_Nickel_Smelting_Refining.jl
 #
 # This TXP models Ontario's SO2 emissions reduction policy for for Sudbury's nickel smelting and refining facilities. 
-# Prepared by Howard (Taeyeong) Park on 08/16/2023.
+# Prepared by Howard (Taeyeong) Park on 09/09/2024.
 #
 
 using SmallModel
@@ -10,7 +10,7 @@ using SmallModel
 module CAC_ON_SOX_Nickel_Smelting_Refining
 
 import ...SmallModel: ReadDisk,WriteDisk,Select
-import ...SmallModel: HisTime,ITime,MaxTime,First,Future,Final,Yr
+import ...SmallModel: HisTime,ITime,MaxTime,First,Future,Final,Yr,Last
 import ...SmallModel: @finite_math,finite_inverse,finite_divide,finite_power,finite_exp,finite_log
 import ...SmallModel: DB
 
@@ -67,7 +67,7 @@ function CapData(data,m,e,a,p)
   # 
   #  Set market switches
   #  
-  years = collect(Yr(2021):Yr(2050))
+  years = collect(Last:Yr(2050))
   for year in years, market in markets, area in areas
     AreaMarket[area,market,year] = 1
   end
@@ -92,7 +92,7 @@ function CapData(data,m,e,a,p)
     CapTrade[market,year] = 0
   end
   
-  years = collect(Yr(2026):Yr(2050))
+  years = collect(Yr(2025):Yr(2050))
   for year in years, market in markets
     CapTrade[market,year] = 2
   end
@@ -118,9 +118,13 @@ function CAC_ON_SOX_Nickel_Smelting_RefiningDataPolicy(db)
   # 
   # Ontario
   # 
-  #             Market   ECC                Area   Poll                      2026     2027     2028     2029     2030     2031     2032     2033     2034     2035     2036     2037     2038     2039     2040     2041     2042     2043     2044     2045     2046     2047     2048     2049     2050
+  #             Market   ECC                Area   Poll
   CapData(data, 104,    "OtherNonferrous", "ON",  "SOX")
-  xGoalPol[     104,                                       Yr(2026):Yr(2050)] = [28226,   28988,   29877,   31121,   32334,   33596,   34752,   36065,   37435,   38851,   40108,   41438,   42803,   44206,   45715,   47113,   48627,   50127,   51839,   53563,   55289,   56965,   58637,   60362,   62147]    
+  #       2025  2026  2027  2028  2029  2030  2031  2032  2033  2034  2035  2036  2037  2038  2039  2040  2041  2042  2043  2044  2045  2046  2047  2048  2049  2050 
+  tmp = [25247, 3497, 3633, 3757, 3855, 3943, 4044, 4122, 4211, 4292, 4371, 4448, 4521, 4598, 4679, 4763, 4849, 4937, 5027, 5119, 5213, 5308, 5407, 5509, 5615, 5729]
+  #     Market Year
+  xGoalPol[104,Yr(2025):Yr(2050)] = tmp
+  
   WriteDisk(db,"SInput/AreaMarket",AreaMarket)
   WriteDisk(db,"SInput/CapTrade",CapTrade)
   WriteDisk(db,"SInput/ECCMarket",ECCMarket)

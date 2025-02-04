@@ -51,6 +51,9 @@ Base.@kwdef struct CAC_ON_SOXPetroProdData
   PollMarket::VariableArray{3} = ReadDisk(db,"SInput/PollMarket") # [Poll,Market,Year] Pollutants included in Market
   RPolicy::VariableArray{4} = ReadDisk(db,"SOutput/RPolicy") # [ECC,Poll,Area,Year] Provincial Reduction (Tonnes/Tonnes)
   xGoalPol::VariableArray{2} = ReadDisk(db,"SInput/xGoalPol") # [Market,Year] Pollution Goal (Tonnes/Yr)
+  
+  # Scratch Variable
+  tmp::VariableArray{1} = zeros(Float64,length(Years))
 end
 
 function CapData(data,m,e,a,p)
@@ -67,7 +70,7 @@ function CapData(data,m,e,a,p)
   # 
   #  Set market switches
   #
-  years = collect(Yr(2021):Yr(2050))
+  years = collect(Last:Yr(2050))
   for year in years, market in markets, area in areas
     AreaMarket[area,market,year] = 1
   end
@@ -92,7 +95,7 @@ function CapData(data,m,e,a,p)
     CapTrade[market,year] = 0
   end
   
-  years = collect(Yr(2022):Yr(2050))
+  years = collect(Future:Yr(2050))
   for year in years, market in markets
     CapTrade[market,year] = 2
   end
@@ -118,9 +121,13 @@ function CAC_ON_SOXPetroProdDataPolicy(db)
   # 
   # Ontario
   #
-  #             Market   ECC                Area   Poll                      2022     2023     2024     2025     2026     2027     2028     2029    2030    2031    2032    2033    2034    2035    2036    2037    2038    2039    2040    2041    2042    2043    2044    2045    2046    2047    2048    2049    2050
+  #             Market   ECC                Area   Poll
   CapData(data, 180,     "Petroleum",      "ON",  "SOX")
-  xGoalPol[     180,                                       Yr(2022):Yr(2050)] = [15372,   15372,   15372,   15372,   15372,   14026,   14026,   5251,   5251,   5251,   5251,   5251,   5251,   5251,   5251,   5251,   5251,   5251,   5251,   5251,   5251,   5251,   5251,   5251,   5251,   5251,   5251,   5251,   5251]
+  read_years = collect(Yr(2022):Yr(2050))
+  write_years = collect(Last:Yr(2050))
+  #                  2022     2023     2024     2025     2026     2027     2028     2029    2030    2031    2032    2033    2034    2035    2036    2037    2038    2039    2040    2041    2042    2043    2044    2045    2046    2047    2048    2049    2050
+  tmp[read_years]= [15372,   15372,   15372,   15372,   15372,   14026,   14026,   5251,   5251,   5251,   5251,   5251,   5251,   5251,   5251,   5251,   5251,   5251,   5251,   5251,   5251,   5251,   5251,   5251,   5251,   5251,   5251,   5251,   5251]
+  xGoalPol[180,write_years] = tmp[write_years]
 
   WriteDisk(db,"SInput/AreaMarket",AreaMarket)
   WriteDisk(db,"SInput/CapTrade",CapTrade)

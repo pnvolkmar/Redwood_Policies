@@ -107,11 +107,6 @@ function IndPolicy(db)
   (; UnPRSw) = data
   (; xMERM,xRM,xUnRP) = data
 
-  #
-  # TODO Promula - make similar improvement to Read done in CAC_CCME_AcidRain, 
-  # eliminating the need to edit the Read statement when 'Future' changes
-  #
-
   # 
   # Nox Emission Reductions
   # 

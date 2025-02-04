@@ -46,14 +46,11 @@ Base.@kwdef struct CAC_CCME_AcidRainData
   CapTrade::VariableArray{2} = ReadDisk(db,"SInput/CapTrade") # [Market,Year] Emission Cap and Trading Switch (1=Trade,Cap Only=2)
   ECCMarket::VariableArray{3} = ReadDisk(db,"SInput/ECCMarket") # [ECC,Market,Year] Economic Categories included in Market
   ECoverage::VariableArray{5} = ReadDisk(db,"SInput/ECoverage") # [ECC,Poll,PCov,Area,Year] Policy Coverage Switch (1=Covered)
-  MaxIter::VariableArray{1} = ReadDisk(db,"SInput/MaxIter") # Maximum Number of Iterations (Number)
+  MaxIter::VariableArray{1} = ReadDisk(db,"SInput/MaxIter") # [Year] Maximum Number of Iterations (Number)
   PCovMarket::VariableArray{3} = ReadDisk(db,"SInput/PCovMarket") # [PCov,Market,Year] Types of Pollution included in Market
   PollMarket::VariableArray{3} = ReadDisk(db,"SInput/PollMarket") # [Poll,Market,Year] Pollutants included in Market
   RPolicy::VariableArray{4} = ReadDisk(db,"SOutput/RPolicy") # [ECC,Poll,Area,Year] Provincial Reduction (Tonnes/Tonnes)
   xGoalPol::VariableArray{2} = ReadDisk(db,"SInput/xGoalPol") # [Market,Year] Pollution Goal (Tonnes/Yr)
-
-  # Scratch Variables
-  Temps::VariableArray{2} = zeros(Float64,length(Market),length(Year)) # [Market,Year] Temporary holder variable for read-in of the xGoalPol tables
 end
 
 # 
@@ -106,15 +103,10 @@ function CapData(data,m,e,a,p)
   MaxIter[1] = max(MaxIter[1],1)
 end
 
-function CAC_CCME_AcidRainDataPolicy(db)
-  data = CAC_CCME_AcidRainData(; db)
+function CAC_CCME_AcidRainDataPolicy(data)
+  (; db) = data
   (; AreaMarket,CapTrade,ECCMarket,ECoverage) = data
   (; MaxIter,PCovMarket,PollMarket,xGoalPol) = data
-
-  #
-  # TODO Promula -  make improvement to Read, eliminating the need to edit 
-  # the Read statement when 'Future' changes
-  #
 
   # 
   # Data for Emissions Caps
@@ -128,44 +120,48 @@ function CAC_CCME_AcidRainDataPolicy(db)
   #             Market  ECC                Area   Poll 
   CapData(data, 9,     "OtherNonferrous", "ON",  "SOX")
 
-  #                                2013     2014     2015     2016     2017     2018     2019     2020     2021     2022     2023     2024     2025     2026     2027     2028     2029     2030     2031     2032     2033     2034     2035     2036     2037     2038     2039     2040     2041     2042     2043     2044     2045     2046     2047     2048     2049     2050  
-  xGoalPol[9,Yr(2013):Yr(2050)] = [332059,  341780,  351500,  260500,  263500,  325500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500]
-    
+  #        2013     2014     2015     2016     2017     2018     2019     2020     2021     2022     2023     2024     2025     2026     2027     2028     2029     2030     2031     2032     2033     2034     2035     2036     2037     2038     2039     2040     2041     2042     2043     2044     2045     2046     2047     2048     2049     2050  
+  tmp = [332059,  341780,  351500,  260500,  263500,  325500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500]
+  xGoalPol[9,Future:Yr(2050)] = tmp[(end-Yr(2050)+Future):(end)] # extract Future-Last elements from tmp
   # 
   # Quebec
   # 
   #             Market   ECC                Area   Poll 
   CapData(data, 49,     "OtherNonferrous", "QC",  "SOX")
 
-  #                                 2013     2014     2015     2016     2017     2018     2019     2020     2021     2022     2023     2024     2025     2026     2027     2028     2029     2030     2031     2032     2033     2034     2035     2036     2037     2038     2039     2040     2041     2042     2043     2044     2045     2046     2047     2048     2049     2050  
-  xGoalPol[49,Yr(2013):Yr(2050)] = [223913,  225780,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648]
-    
+  #        2013     2014     2015     2016     2017     2018     2019     2020     2021     2022     2023     2024     2025     2026     2027     2028     2029     2030     2031     2032     2033     2034     2035     2036     2037     2038     2039     2040     2041     2042     2043     2044     2045     2046     2047     2048     2049     2050  
+  tmp = [223913,  225780,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648]
+  xGoalPol[49,Future:Yr(2050)] = tmp[(end-Yr(2050)+Future):(end)] # extract Future-Last elements from tmp
+  
   # 
   # New Brunswick
   # 
   #             Market   ECC                Area   Poll 
   CapData(data, 70,     "OtherNonferrous", "NB",  "SOX")
-
-  #                             2013     2014     2015     2016     2017     2018     2019     2020     2021     2022     2023     2024     2025     2026     2027     2028     2029     2030     2031     2032     2033     2034     2035     2036     2037     2038     2039     2040     2041     2042     2043     2044     2045     2046     2047     2048     2049     2050  
-  xGoalPol[70,Yr(2013):Yr(2050)] = [78110,   78868,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627]
-    
+  
+  #       2013     2014     2015     2016     2017     2018     2019     2020     2021     2022     2023     2024     2025     2026     2027     2028     2029     2030     2031     2032     2033     2034     2035     2036     2037     2038     2039     2040     2041     2042     2043     2044     2045     2046     2047     2048     2049     2050  
+  tmp = [78110,   78868,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627]
+  xGoalPol[70,Future:Yr(2050)] = tmp[(end-Yr(2050)+Future):(end)] # extract Future-Last elements from tmp
+  
   # 
   # Nova Scotia
   # 
   #             Market   ECC           Area   Poll 
   CapData(data, 17,     "UtilityGen", "NS",  "SOX")
-
-  #                                 2013     2014     2015     2016     2017     2018     2019     2020     2021     2022     2023     2024     2025     2026     2027     2028     2029     2030     2031     2032     2033     2034     2035     2036     2037     2038     2039     2040     2041     2042     2043     2044     2045     2046     2047     2048     2049     2050  
-  xGoalPol[17,Yr(2013):Yr(2050)] = [69500,   69500,   58170,   58170,   58170,   58170,   58170,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750]
-    
+  
+  #       2013     2014     2015     2016     2017     2018     2019     2020     2021     2022     2023     2024     2025     2026     2027     2028     2029     2030     2031     2032     2033     2034     2035     2036     2037     2038     2039     2040     2041     2042     2043     2044     2045     2046     2047     2048     2049     2050  
+  tmp = [69500,   69500,   58170,   58170,   58170,   58170,   58170,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750]
+  xGoalPol[17,Future:Yr(2050)] = tmp[(end-Yr(2050)+Future):(end)] # extract Future-Last elements from tmp
+  
   # 
   # Newfoundland
   # 
   #             Market   ECC              Area   Poll 
   CapData(data, 32,     "IronOreMining", "NL",  "SOX")
-
-  #                                 2013     2014     2015     2016     2017     2018     2019     2020     2021     2022     2023     2024     2025     2026     2027     2028     2029     2030     2031     2032     2033     2034     2035     2036     2037     2038     2039     2040     2041     2042     2043     2044     2045     2046     2047     2048     2049     2050  
-  xGoalPol[32,Yr(2013):Yr(2050)] = [55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561]
+  
+  #       2013     2014     2015     2016     2017     2018     2019     2020     2021     2022     2023     2024     2025     2026     2027     2028     2029     2030     2031     2032     2033     2034     2035     2036     2037     2038     2039     2040     2041     2042     2043     2044     2045     2046     2047     2048     2049     2050  
+  tmp = [55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561,   55561]
+  xGoalPol[32,Future:Yr(2050)] = tmp[(end-Yr(2050)+Future):(end)] # extract Future-Last elements from tmp
     
   WriteDisk(db,"SInput/AreaMarket",AreaMarket)
   WriteDisk(db,"SInput/ECCMarket",ECCMarket)
@@ -180,7 +176,8 @@ end
 
 function PolicyControl(db)
   @info "CAC_CCME_AcidRain.jl - PolicyControl"
-  CAC_CCME_AcidRainDataPolicy(db)
+  data = CAC_CCME_AcidRainData(; db)
+  CAC_CCME_AcidRainDataPolicy(data)
 end
 
 if abspath(PROGRAM_FILE) == @__FILE__

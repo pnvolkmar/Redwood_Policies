@@ -98,14 +98,14 @@ function TransPolicy(db)
   # 
   @. Reduce = 1.0  
   #
-  years = collect(Yr(2022):Yr(2050))
+  years = collect(Yr(2021):Yr(2050))
   for year in years
-    Reduce[year] = 0.470
+    Reduce[year] = 0.473
   end 
   
   #
-  years = collect(Future:Final)
   SOX = Select(Poll,"SOX")
+  years = collect(Future:Final)
   fuels = Select(Fuel,["Gasoline","Ethanol"]) 
   techs = findall(FTMap[Gasoline,Passenger,:] .== 1)
   for tech in techs
@@ -114,9 +114,7 @@ function TransPolicy(db)
         xRM[tech,Passenger,SOX,area,year] = min(xRM[tech,Passenger,SOX,area,year],
           Reduce[year])
       end
-      
     end
-    
   end    
   
   WriteDisk(db,"$Input/xRM",xRM)

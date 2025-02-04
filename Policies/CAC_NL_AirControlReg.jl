@@ -105,9 +105,11 @@ function CAC_NL_AirControlRegDataPolicy(db)
   data = CAC_NL_AirControlRegData(; db)
   (; AreaMarket,CapTrade,ECCMarket,ECoverage,MaxIter) = data
   (; PCovMarket,PollMarket,xGoalPol) = data
-
+  
   #
-  # TODO Promula - make similar improvement to Read done in CAC_CCME_AcidRain, eliminating the need to edit the Read statement when 'Future' changes
+  # Note that all recorded years are read into the temporary variable `tmp`
+  # but only years Future to Final are read from the temporary variable into
+  # the model variable `xGoalPol`
   #
   
   # 
@@ -117,15 +119,22 @@ function CAC_NL_AirControlRegDataPolicy(db)
   # 
   # Newfoundland
   # 
-  #             Market   ECC                Area   Poll                     2013     2014     2015     2016     2017     2018     2019     2020     2021     2022     2023     2024     2025     2026     2027     2028     2029     2030     2031     2032     2033     2034     2035     2036     2037     2038     2039     2040     2041     2042     2043     2044     2045     2046     2047     2048     2049     2050  
+  #             Market   ECC                Area   Poll   
   CapData(data, 91,     "IronOreMining",   "NL",  "SOX")
-  xGoalPol[     91,                                       Yr(2013):Yr(2050)] = [4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439] 
+  tmp = zeros(Float64,length(Years)) # Create temporary variable with dim years
+  #                        2013     2014     2015     2016     2017     2018     2019     2020     2021     2022     2023     2024     2025     2026     2027     2028     2029     2030     2031     2032     2033     2034     2035     2036     2037     2038     2039     2040     2041     2042     2043     2044     2045     2046     2047     2048     2049     2050  
+  tmp[Yr(2013):Yr(2050)]= [4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439,    4439] 
+  xGoalPol[91, Future:Final] = tmp[Future:Final]
   
   CapData(data, 97,     "IronOreMining",   "NL",  "PM25")
-  xGoalPol[     97,                                       Yr(2013):Yr(2050)] = [1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058] 
+  tmp = zeros(Float64,length(Years)) # Reset temporary variable with dim years
+  tmp[Yr(2013):Yr(2050)] = [1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058] 
+  xGoalPol[97, Future:Final] = tmp[Future:Final]
   
   CapData(data, 98,     "IronOreMining",   "NL",  "BC")
-  xGoalPol[     98,                                       Yr(2013):Yr(2050)] = [1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058] 
+  tmp = zeros(Float64,length(Years)) # Reset temporary variable with dim years
+  tmp[Yr(2013):Yr(2050)] = [1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058,    1058] 
+  xGoalPol[98, Future:Final] = tmp[Future:Final]
   
   WriteDisk(db,"SInput/AreaMarket",AreaMarket)
   WriteDisk(db,"SInput/CapTrade",CapTrade)
