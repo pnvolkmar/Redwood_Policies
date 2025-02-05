@@ -26,7 +26,7 @@ Base.@kwdef struct SControl
   CalDB::String = "SCalDB"
   Input::String = "SInput"
   Outpt::String = "SOutput"
-  BCNameDB::String = ReadDisk(db,"E2020DB/BCNameDB") #  Base Case Name
+  BCNameDB::String = ReadDisk(db,"E2020DB/BCNameDB")#  Base Case Name
 
   Area::SetArray = ReadDisk(db,"E2020DB/AreaKey")
   AreaDS::SetArray = ReadDisk(db,"E2020DB/AreaDS")

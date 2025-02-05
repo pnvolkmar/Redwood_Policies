@@ -10,7 +10,7 @@ using SmallModel
 module CAC_ON_SOXPetroProd
 
 import ...SmallModel: ReadDisk,WriteDisk,Select
-import ...SmallModel: HisTime,ITime,MaxTime,First,Future,Final,Yr
+import ...SmallModel: HisTime,ITime,MaxTime,First,Future,Final,Yr,Last
 import ...SmallModel: @finite_math,finite_inverse,finite_divide,finite_power,finite_exp,finite_log
 import ...SmallModel: DB
 
@@ -112,7 +112,7 @@ function CAC_ON_SOXPetroProdDataPolicy(db)
   (; NationDS,Nations,PCov,PCovDS,PCovs,Poll,PollDS,Polls) = data
   (; Year,YearDS,Years) = data
   (; ANMap,AreaMarket,CapTrade,ECCMarket,ECoverage,MaxIter) = data
-  (; PCovMarket,PollMarket,RPolicy,xGoalPol) = data
+  (; PCovMarket,PollMarket,RPolicy,xGoalPol,tmp) = data
 
   # 
   # Data for Emissions Caps

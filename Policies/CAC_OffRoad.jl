@@ -25,7 +25,7 @@ Base.@kwdef struct IControl
   CalDB::String = "ICalDB"
   Input::String = "IInput"
   Outpt::String = "IOutput"
-  BCNameDB::String = ReadDisk(db,"E2020DB/BCNameDB")[1] #  Base Case Name
+  BCNameDB::String = ReadDisk(db,"E2020DB/BCNameDB") #  Base Case Name
 
   Area::SetArray = ReadDisk(db,"E2020DB/AreaKey")
   AreaDS::SetArray = ReadDisk(db,"E2020DB/AreaDS")
@@ -227,7 +227,7 @@ Base.@kwdef struct TControl
   CalDB::String = "TCalDB"
   Input::String = "TInput"
   Outpt::String = "TOutput"
-  BCNameDB::String = ReadDisk(db,"E2020DB/BCNameDB")[1] #  Base Case Name
+  BCNameDB::String = ReadDisk(db,"E2020DB/BCNameDB") #  Base Case Name
 
   Area::SetArray = ReadDisk(db,"E2020DB/AreaKey")
   AreaDS::SetArray = ReadDisk(db,"E2020DB/AreaDS")

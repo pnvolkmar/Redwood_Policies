@@ -51,6 +51,9 @@ Base.@kwdef struct CAC_CCME_AcidRainData
   PollMarket::VariableArray{3} = ReadDisk(db,"SInput/PollMarket") # [Poll,Market,Year] Pollutants included in Market
   RPolicy::VariableArray{4} = ReadDisk(db,"SOutput/RPolicy") # [ECC,Poll,Area,Year] Provincial Reduction (Tonnes/Tonnes)
   xGoalPol::VariableArray{2} = ReadDisk(db,"SInput/xGoalPol") # [Market,Year] Pollution Goal (Tonnes/Yr)
+
+  # Scratch
+  tmp::VariableArray{1} = zeros(Float64,length(Years)) # Create temporary variable with dim years
 end
 
 # 
@@ -106,32 +109,36 @@ end
 function CAC_CCME_AcidRainDataPolicy(data)
   (; db) = data
   (; AreaMarket,CapTrade,ECCMarket,ECoverage) = data
-  (; MaxIter,PCovMarket,PollMarket,xGoalPol) = data
+  (; MaxIter,PCovMarket,PollMarket,xGoalPol,tmp) = data
 
   # 
   # Data for Emissions Caps
   # CCME Acid Rain target for ON is 442.5 kt - see ON Acid Rain 
   # Provincial Cap.xlxs for recalculation (updated by Stephanie August 20, 2012)
   #
-
+  read_years = collect(Yr(2013):Yr(2050))
+  write_years = collect(Future:Final)
   # 
   # Ontario
   # 
   #             Market  ECC                Area   Poll 
   CapData(data, 9,     "OtherNonferrous", "ON",  "SOX")
 
-  #        2013     2014     2015     2016     2017     2018     2019     2020     2021     2022     2023     2024     2025     2026     2027     2028     2029     2030     2031     2032     2033     2034     2035     2036     2037     2038     2039     2040     2041     2042     2043     2044     2045     2046     2047     2048     2049     2050  
-  tmp = [332059,  341780,  351500,  260500,  263500,  325500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500]
-  xGoalPol[9,Future:Yr(2050)] = tmp[(end-Yr(2050)+Future):(end)] # extract Future-Last elements from tmp
+  #                   2013     2014     2015     2016     2017     2018     2019     2020     2021     2022     2023     2024     2025     2026     2027     2028     2029     2030     2031     2032     2033     2034     2035     2036     2037     2038     2039     2040     2041     2042     2043     2044     2045     2046     2047     2048     2049     2050  
+  tmp[read_years] = [332059,  341780,  351500,  260500,  263500,  325500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500,  342500]
+  xGoalPol[9,write_years] = tmp[write_years] # extract Future-Last elements from tmp
+  # TODO Promula The write years is incorrect. It should be as coded above, it is as coded below
+  incorrect_years = collect(Yr(2017):(Yr(2017)+length(write_years)-1))
+  xGoalPol[9,write_years] = tmp[incorrect_years] # extract Future-Last elements from tmp
   # 
   # Quebec
   # 
   #             Market   ECC                Area   Poll 
   CapData(data, 49,     "OtherNonferrous", "QC",  "SOX")
 
-  #        2013     2014     2015     2016     2017     2018     2019     2020     2021     2022     2023     2024     2025     2026     2027     2028     2029     2030     2031     2032     2033     2034     2035     2036     2037     2038     2039     2040     2041     2042     2043     2044     2045     2046     2047     2048     2049     2050  
-  tmp = [223913,  225780,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648]
-  xGoalPol[49,Future:Yr(2050)] = tmp[(end-Yr(2050)+Future):(end)] # extract Future-Last elements from tmp
+  #                   2013     2014     2015     2016     2017     2018     2019     2020     2021     2022     2023     2024     2025     2026     2027     2028     2029     2030     2031     2032     2033     2034     2035     2036     2037     2038     2039     2040     2041     2042     2043     2044     2045     2046     2047     2048     2049     2050  
+  tmp[read_years] = [223913,  225780,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648,  227648]
+  xGoalPol[49,write_years] = tmp[write_years] # extract Future-Last elements from tmp
   
   # 
   # New Brunswick
@@ -139,9 +146,9 @@ function CAC_CCME_AcidRainDataPolicy(data)
   #             Market   ECC                Area   Poll 
   CapData(data, 70,     "OtherNonferrous", "NB",  "SOX")
   
-  #       2013     2014     2015     2016     2017     2018     2019     2020     2021     2022     2023     2024     2025     2026     2027     2028     2029     2030     2031     2032     2033     2034     2035     2036     2037     2038     2039     2040     2041     2042     2043     2044     2045     2046     2047     2048     2049     2050  
-  tmp = [78110,   78868,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627]
-  xGoalPol[70,Future:Yr(2050)] = tmp[(end-Yr(2050)+Future):(end)] # extract Future-Last elements from tmp
+  #                   2013     2014     2015     2016     2017     2018     2019     2020     2021     2022     2023     2024     2025     2026     2027     2028     2029     2030     2031     2032     2033     2034     2035     2036     2037     2038     2039     2040     2041     2042     2043     2044     2045     2046     2047     2048     2049     2050  
+  tmp[read_years] = [78110,   78868,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627,   79627]
+  xGoalPol[70,write_years] = tmp[write_years] # extract Future-Last elements from tmp
   
   # 
   # Nova Scotia
@@ -149,10 +156,12 @@ function CAC_CCME_AcidRainDataPolicy(data)
   #             Market   ECC           Area   Poll 
   CapData(data, 17,     "UtilityGen", "NS",  "SOX")
   
-  #       2013     2014     2015     2016     2017     2018     2019     2020     2021     2022     2023     2024     2025     2026     2027     2028     2029     2030     2031     2032     2033     2034     2035     2036     2037     2038     2039     2040     2041     2042     2043     2044     2045     2046     2047     2048     2049     2050  
-  tmp = [69500,   69500,   58170,   58170,   58170,   58170,   58170,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750]
-  xGoalPol[17,Future:Yr(2050)] = tmp[(end-Yr(2050)+Future):(end)] # extract Future-Last elements from tmp
-  
+  #                   2013     2014     2015     2016     2017     2018     2019     2020     2021     2022     2023     2024     2025     2026     2027     2028     2029     2030     2031     2032     2033     2034     2035     2036     2037     2038     2039     2040     2041     2042     2043     2044     2045     2046     2047     2048     2049     2050  
+  tmp[read_years] = [69500,   69500,   58170,   58170,   58170,   58170,   58170,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750,   34750]
+  xGoalPol[17,write_years] = tmp[write_years] # extract Future-Last elements from tmp
+  # TODO Promula The write years is incorrect. It should be as coded above, it is as coded below
+  incorrect_years = collect(Yr(2017):(Yr(2017)+length(write_years)-1))
+  xGoalPol[17,write_years] = tmp[incorrect_years] # extract Future-Last elements from tmp
   # 
   # Newfoundland
   # 

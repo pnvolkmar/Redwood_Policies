@@ -40,15 +40,15 @@ function MacroPolicy(db)
   (; Areas,Years) = data
   (; SqIVTC) = data
   
-  years = Select(Years, from = "2023", to = "2030")
+  years = collect(Yr(2023):Yr(2030))
   for area in Areas, year in years
     SqIVTC[area,year] = 0.5
   end
-  years = Select(Years, from = "2031", to = "2040")
+  years = collect(Yr(2031):Yr(2040))
   for area in Areas, year in years
     SqIVTC[area,year] = 0.25
   end
-  years = Select(Years, from = "2041", to = "2050")
+  years = collect(Yr(2041):Yr(2050))
   for area in Areas, year in years
     SqIVTC[area,year] = 0.0
   end

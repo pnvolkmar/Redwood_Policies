@@ -123,16 +123,16 @@ function TransPolicy(db)
   end
 
   WriteDisk(db,"$Input/POCX",POCX) 
-  ec = Select(EC,"Passenger")
-  poll = Select(Poll,"VOC")
-  year = Select(Year,"2023")
-  print("Reduce(2023): ")
-  print(Reduce[ec,poll,year])
-  ec = Select(EC,"Passenger")
-  poll = Select(Poll,"VOC")
-  year = Last
-  print("\nReduce(Last): ")
-  print(Reduce[ec,poll,year])
+  # ec = Select(EC,"Passenger")
+  # poll = Select(Poll,"VOC")
+  # year = Select(Year,"2023")
+  # # print("Reduce(2023): ")
+  # # print(Reduce[ec,poll,year])
+  # ec = Select(EC,"Passenger")
+  # poll = Select(Poll,"VOC")
+  # year = Last
+  # print("\nReduce(Last): ")
+  # print(Reduce[ec,poll,year])
 end
 
 function PolicyControl(db)
