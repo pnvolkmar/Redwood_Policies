@@ -76,7 +76,7 @@ function MacroPolicy(db)
                       "Petroleum","Cement","IronSteel","Aluminum","OtherNonferrous",
                       "HeavyOilMining","LightOilMining","SAGDOilSands","CSSOilSands","OilSandsMining",
                       "OilSandsUpgraders","SweetGasProcessing","UnconventionalGasProduction",
-                      "SourGasProcessing","UtilityGen"])
+                      "SourGasProcessing","UtilityGen","IndustrialGas"])
 
   # SqCCSq = 3 is "SqCC = SqCCLevelized/Inflation(2016)/(SqCCR+SqOCF)*Inflation"
   for year in Years, area in Areas, ecc in eccs
@@ -87,7 +87,8 @@ function MacroPolicy(db)
 
   eccs = Select(ECC,["PulpPaperMills","Fertilizer","Petroleum","Cement","IronSteel",
                       "Aluminum","OtherNonferrous","SAGDOilSands","CSSOilSands","OilSandsMining",
-                      "OilSandsUpgraders","SweetGasProcessing","SourGasProcessing"])
+                      "OilSandsUpgraders","SweetGasProcessing","SourGasProcessing","OtherChemicals",
+                      "Petrochemicals","IndustrialGas"])
 
   # 
   # Source: "CCS Curves Percent Reduction v4.1.xlsx" - Jeff Amlin 10/26/21
@@ -97,20 +98,23 @@ function MacroPolicy(db)
   # SqCCThreshold - minimun value for CCS
   # 
   
-  # /                 ECC                     SqA0           SqB0        SqC0    SqCCThreshold
-  ReadTerms(data,"PulpPaperMills",       1.80234E+21,   -9.63586,   0.35175,    90.00)
-  ReadTerms(data,"Fertilizer",           647118.2344,   -3.17925,   0.56905,    30.00)
-  ReadTerms(data,"Petroleum",            1449030171,    -4.25037,   0.50250,    50.00)
-  ReadTerms(data,"Cement",               4.21563E+13,   -6.54597,   0.60054,    85.00)
-  ReadTerms(data,"IronSteel",            4.65289E+17,   -8.30618,   0.30163,    80.00)
-  ReadTerms(data,"Aluminum",             3771377.887,   -3.71224,   0.86480,    155.00)
-  ReadTerms(data,"OtherNonferrous",      4.34133E+15,   -7.81964,   0.50295,    80.00)
-  ReadTerms(data,"SAGDOilSands",         3.52031E+31,   -13.43649,  0.80400,    150.00)
-  ReadTerms(data,"CSSOilSands",          3.52031E+31,   -13.43649,  0.80400,    150.00)
-  ReadTerms(data,"OilSandsMining",       1.42335E+34,   -14.36966,  0.60300,    165.00)
-  ReadTerms(data,"OilSandsUpgraders",    1.24152E+28,   -12.18405,  0.80400,    130.00)
-  ReadTerms(data,"SweetGasProcessing",   1796.881113,   -1.30184,   0.91169,    20.00)
-  ReadTerms(data,"SourGasProcessing",    1796.881113,   -1.30184,   0.91169,    20.00)
+  # /                 ECC                     SqA0           SqB0          SqC0     SqCCThreshold
+  ReadTerms(data,"PulpPaperMills",       1.06072E+35,     -14.6798,      0.52000,        170.00)
+  ReadTerms(data,"Fertilizer",           3.76141E+20,     -9.37632,      0.74000,         86.00)
+  ReadTerms(data,"Petroleum",            2.54253E+20,     -9.33126,      0.65325,         85.00)
+  ReadTerms(data,"Cement",               3.76141E+20,     -9.37632,      0.83000,         86.00)
+  ReadTerms(data,"IronSteel",            1.06072E+35,     -14.6798,      0.52000,        170.00)
+  ReadTerms(data,"Aluminum",             3771377.887,     -3.71224,      0.86480,        155.00)
+  ReadTerms(data,"OtherNonferrous",      4.34133E+15,     -7.81964,      0.50295,         80.00)
+  ReadTerms(data,"SAGDOilSands",         3.52031E+31,    -13.43649,      0.80400,        150.00)
+  ReadTerms(data,"CSSOilSands",          3.52031E+31,    -13.43649,      0.80400,        150.00)
+  ReadTerms(data,"OilSandsMining",       1.42335E+34,    -14.36966,      0.60300,        165.00)
+  ReadTerms(data,"OilSandsUpgraders",    1.24152E+28,    -12.18405,      0.80400,        130.00)
+  ReadTerms(data,"SweetGasProcessing",   1796.881113,     -1.30184,      0.91169,         20.00)
+  ReadTerms(data,"SourGasProcessing",    1796.881113,     -1.30184,      0.91169,         20.00)
+  ReadTerms(data,"OtherChemicals",       8.27936E+10,     -5.51657,      0.60300,         30.00)
+  ReadTerms(data,"Petrochemicals",       1.71867E+20,     -9.24611,      0.71000,         84.00)
+  ReadTerms(data,"IndustrialGas",        1.71867E+20,     -9.24611,      0.71000,         84.00)
 
   # 
   # Heavy Oil in SK uses Cement for now - from Gavin - Jeff Amlin 11/03/22
@@ -131,18 +135,6 @@ function MacroPolicy(db)
   SqB0[UtilityGen,cn_areas,Years] = SqB0[Cement,cn_areas,Years]
   SqC0[UtilityGen,cn_areas,Years] = SqC0[Cement,cn_areas,Years]
   SqCCThreshold[UtilityGen,cn_areas,Years] = SqCCThreshold[Cement,cn_areas,Years]
-
-  # 
-  # Petrochemicals and Other Chemicals use Pulp and Paper Mills
-  # 
-  chems = Select(ECC,["Petrochemicals", "OtherChemicals"])
-  PulpPaperMills = Select(ECC,"PulpPaperMills")
-  for year in Years, area in cn_areas, ecc in chems
-    SqA0[ecc,area,year] = SqA0[PulpPaperMills,area,year] 
-    SqB0[ecc,area,year] = SqB0[PulpPaperMills,area,year] 
-    SqC0[ecc,area,year] = SqC0[PulpPaperMills,area,year] 
-    SqCCThreshold[ecc,area,year] = SqCCThreshold[PulpPaperMills,area,year]
-  end
 
   # 
   # Trend for availability of CCS
@@ -180,16 +172,21 @@ function MacroPolicy(db)
   # Source Samuel Lord CCS presentation  
   # Source: "CCS Curves Percent Reduction v3.1.xlsx" - Jeff Amlin 10/03/21
   # 
-  
+  # TODOJulia: Areas are out of order in the Promula version, code below has been adjusted to match
+  # Commented out lines are the correct values from the original .txp - Ian 02/04/25
+  #
   SqTransStorageCost[Select(AreaDS,"Ontario"),1] =                 160
   SqTransStorageCost[Select(AreaDS,"Quebec"),1] =                  200
   SqTransStorageCost[Select(AreaDS,"British Columbia"),1] =        50
   SqTransStorageCost[Select(AreaDS,"Alberta"),1] =                 20
   SqTransStorageCost[Select(AreaDS,"Manitoba"),1] =                100
   SqTransStorageCost[Select(AreaDS,"Saskatchewan"),1] =            20
-  SqTransStorageCost[Select(AreaDS,"Nova Scotia"),1] =             240
-  SqTransStorageCost[Select(AreaDS,"Newfoundland"),1] =            400
-  SqTransStorageCost[Select(AreaDS,"New Brunswick"),1] =           200
+  #SqTransStorageCost[Select(AreaDS,"Nova Scotia"),1] =             240
+  #SqTransStorageCost[Select(AreaDS,"Newfoundland"),1] =            400
+  #SqTransStorageCost[Select(AreaDS,"New Brunswick"),1] =           200
+  SqTransStorageCost[Select(AreaDS,"Nova Scotia"),1] =             400 # Matches Promula results
+  SqTransStorageCost[Select(AreaDS,"Newfoundland"),1] =            200 # Matches Promula results
+  SqTransStorageCost[Select(AreaDS,"New Brunswick"),1] =           240 # Matches Promula results
   SqTransStorageCost[Select(AreaDS,"Prince Edward Island"),1] =    300
   SqTransStorageCost[Select(AreaDS,"Yukon Territory"),1] =         300
   SqTransStorageCost[Select(AreaDS,"Northwest Territory"),1] =     400
