@@ -83,7 +83,7 @@ function ElecPolicy(db)
   # No development for the following plant types:
   # Biogas, Biomass, Coal, CoalCCS, Geothermal, FuelCell, OGSteam,
   # OtherGeneration, PumpedHydro, SolarThermal, Tidal, Waste, Unknown
-  plants = Select(Plants, ["Biogas", "Biomass", "Coal","CoalCCS","Geothermal", "FuelCell","OGSteam","OtherGeneration","PumpedHydro","SolarThermal","Tidal","Waste"])
+  plants = Select(Plant, ["Biogas", "Biomass", "Coal","CoalCCS","Geothermal", "FuelCell","OGSteam","OtherGeneration","PumpedHydro","SolarThermal","Tidal","Waste"])
   years = collect(Future:Final)
   for area in areas
     nodes = NodeAreaIndex(data,area)
@@ -94,7 +94,7 @@ function ElecPolicy(db)
   #
   # OGCC
   #
-  plants = Select(Plants, "OGCC")
+  plants = Select(Plant, "OGCC")
   years = collect(Future:Final)
   areas = Select(Area,["ON", "QC","BC","NL","PE","NT","NU","YT"])
   for area in areas
@@ -107,7 +107,7 @@ function ElecPolicy(db)
   # No Limit
   # 
   areas = Select(Area,["AB","SK","NB","NS"])
-  for area_name in areas
+  for area in areas
     nodes = NodeAreaIndex(data,area)
     for plant in plants, node in nodes, year in years
       xGCPot[plant,node,area,year] = 1000000
@@ -121,7 +121,7 @@ function ElecPolicy(db)
   #
   # SmallOGCC
   #
-  plants = Select(Plants, "SmallOGCC")
+  plants = Select(Plant, "SmallOGCC")
   years = collect(Future:Final)
   areas = Select(Area,["ON", "QC","BC","MB","NL","PE","NT","NU","YT"])
   for area in areas
@@ -141,7 +141,7 @@ function ElecPolicy(db)
   #
   # OGCT
   #
-  plants = Select(Plants, "OGCT")
+  plants = Select(Plant, "OGCT")
   years = collect(Future:Final)
   # No development
   areas = Select(Area, ["QC","BC","NL"])
@@ -162,10 +162,14 @@ function ElecPolicy(db)
   end
   area = Select(Area, "PE")
   node = NodeAreaIndex(data, area)
-  xGCPot[plant,node,area,year] = GCPA[plant,area,Yr(2021)] + 140
+  for plant in plants, year in years
+    xGCPot[plant,node,area,year] = GCPA[plant,area,Yr(2021)] + 140
+  end
   area = Select(Area, "MB")
   node = NodeAreaIndex(data, area)
-  xGCPot[plant,node,area,year] = 7000
+  for plant in plants, year in years
+    xGCPot[plant,node,area,year] = 7000
+  end    
   # No Limit
   areas = Select(Area, ["ON","AB","SK","NB"])
   for area in areas
@@ -177,7 +181,7 @@ function ElecPolicy(db)
   #
   # NGCCS
   #
-  plants = Select(Plants, "NGCCS")
+  plants = Select(Plant, "NGCCS")
   years = collect(Future:Final)
   # No development
   areas = Select(Area, ["BC","ON","QC","NB","NS","NL","PE","NT","NU","YT"])
@@ -198,7 +202,7 @@ function ElecPolicy(db)
   #
   # BiomassCCS
   #
-  plants = Select(Plants, "BiomassCCS")
+  plants = Select(Plant, "BiomassCCS")
   years = collect(Future:Final)
   # No development
   areas = Select(Area, ["BC","ON","QC","NB","NS","NL","PE","NT","NU","YT"])
