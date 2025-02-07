@@ -6,7 +6,6 @@ using SmallModel
 
 module Res_PeakSavings
 
-
 import ...SmallModel: ReadDisk,WriteDisk,Select
 import ...SmallModel: ITime,HisTime,MaxTime,Zero,First,Last,Future,Final,Yr
 import ...SmallModel: @finite_math,finite_inverse,finite_divide,finite_power,finite_exp,finite_log
@@ -42,7 +41,7 @@ Base.@kwdef struct RControl
  YearDS::SetArray = ReadDisk(db,"E2020DB/YearDS")
  Years::Vector{Int} = collect(Select(Year))
 
- DmdRef::VariableArray{5} = ReadDisk(BCNameDB,"ROutput/Dmd") # [Enduse,Tech,EC,Area,Year] Demand (TBtu/Yr)
+ DmdRef::VariableArray{5} = ReadDisk(BCNameDB,"$Outpt/Dmd") # [Enduse,Tech,EC,Area,Year] Demand (TBtu/Yr)
  ECCMap = ReadDisk(db, "$Input/ECCMap") # (EC,ECC) 'Map between EC and ECC'
  SecMap::VariableArray{1} = ReadDisk(db,"SInput/SecMap") #[ECC]  Map Between the Sector and ECC Sets
  xPkSav::VariableArray{4} = ReadDisk(db,"$Input/xPkSav") # [Enduse,EC,Area,Year] Peak Savings from Programs (MW)
@@ -56,6 +55,7 @@ end
 
 function ResPolicy(db)
  data = RControl(; db)
+
  (; Input) = data
  (; Area,Areas,EC,ECs,ECC,ECCs,Enduse,Enduses,Tech,Techs,Year,Years) = data
  (; ECCMap,DmdRef,xPkSav,xPkSavECC,DmFrac,DmdTotal,SecMap,TotPkSav) = data
