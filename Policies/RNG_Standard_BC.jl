@@ -75,13 +75,8 @@ function ResPolicy(db)
   for year in years
     Target[year] = 0.05
   end
-  
-  years = collect(Yr(2020):Yr(2024))    
- 
-  for year in years
-    Target[year] = Target[year-1]+(Target[Yr(2025)]-Target[Yr(2020)])/
-      (Yr(2025)-Yr(2020))
-  end
+  Target[Yr(2024)] = 0.03
+  Target[Future] = 0.01
   
   # 
   # A portion of Natural Gas demands are now RNG
@@ -98,7 +93,6 @@ function ResPolicy(db)
     DmFracMin[enduse,RNG,tech,ec,area,year] = xDmFrac[enduse,RNG,tech,ec,area,year]
   end
   
-  WriteDisk(db,"$Input/xDmFrac",xDmFrac)
   WriteDisk(db,"$Input/DmFracMin",DmFracMin)
 end
 
@@ -160,12 +154,8 @@ function ComPolicy(db)
   for year in years
     Target[year] = 0.05
   end
-  years = collect(Yr(2020):Yr(2024))    
- 
-  for year in years
-    Target[year] = Target[year-1]+(Target[Yr(2025)]-Target[Yr(2020)])/
-      (Yr(2025)-Yr(2020))
-  end
+  Target[Yr(2024)] = 0.03
+  Target[Future] = 0.01
   
   # 
   # A portion of Natural Gas demands are now RNG
@@ -183,7 +173,6 @@ function ComPolicy(db)
       xDmFrac[enduse,RNG,tech,ec,area,year]
   end
   
-  WriteDisk(db,"$Input/xDmFrac",xDmFrac)
   WriteDisk(db,"$Input/DmFracMin",DmFracMin)
 end
 
@@ -245,12 +234,8 @@ function IndPolicy(db)
   for year in years
     Target[year] = 0.05
   end
- 
-  years = collect(Yr(2020):Yr(2024))   
-  for year in years
-    Target[year] = Target[year-1]+(Target[Yr(2025)]-Target[Yr(2020)])/
-      (Yr(2025)-Yr(2020))
-  end
+  Target[Yr(2024)] = 0.03
+  Target[Future] = 0.01
   
   # 
   # A portion of Natural Gas demands are now RNG
@@ -268,7 +253,6 @@ function IndPolicy(db)
       xDmFrac[enduse,RNG,tech,ec,area,year]
   end
   
-  WriteDisk(db,"$Input/xDmFrac",xDmFrac)
   WriteDisk(db,"$Input/DmFracMin",DmFracMin)
 end
 
@@ -316,19 +300,19 @@ end
 
 
 function GetUtilityUnits(data,year)
-(; UnArea,UnCogen,UnCounter,UnNation) = data
+  (; UnArea,UnCogen,UnCounter,UnNation) = data
 
-#
-# Select Unit If (UnNation eq "CN") and (UnCogen eq 0) and (UnArea eq "BC")
-#
-UnitsActive = 1:Int(UnCounter[year])
+  #
+  # Select Unit If (UnNation eq "CN") and (UnCogen eq 0) and (UnArea eq "BC")
+  #
+  UnitsActive = 1:Int(UnCounter[year])
 
-UnitsNotCogen = Select(UnCogen,==(0.0))
-UnitsInCanada = Select(UnNation,==("CN"))
-UnitsInBC = Select(UnArea,==("BC"))
-UnitsToAdjust = intersect(UnitsActive,UnitsNotCogen,UnitsInCanada,UnitsInBC)
+  UnitsNotCogen = Select(UnCogen,==(0.0))
+  UnitsInCanada = Select(UnNation,==("CN"))
+  UnitsInBC = Select(UnArea,==("BC"))
+  UnitsToAdjust = intersect(UnitsActive,UnitsNotCogen,UnitsInCanada,UnitsInBC)
 
-return UnitsToAdjust
+  return UnitsToAdjust
 end
 
 function ElecPolicy(db)
@@ -346,14 +330,10 @@ function ElecPolicy(db)
   for year in years
     Target[year] = 0.05
   end
- 
-  years = collect(Yr(2020):Yr(2024))    
-  for year in years
-    Target[year] = Target[year-1]+(Target[Yr(2025)]-Target[Yr(2020)])/
-      (Yr(2025)-Yr(2020))
-  end   
+  Target[Yr(2024)] = 0.03
+  Target[Future] = 0.01
   
-  years = collect(Yr(2022):Yr(2050))
+  years = collect(Future:Yr(2050))
   RNG = Select(FuelEP,"RNG")
   NaturalGas = Select(FuelEP,"NaturalGas")
   units = GetUtilityUnits(data,Yr(2025))
