@@ -1,6 +1,10 @@
 *
 !*.gitignore
 
+# Batch Files
+!2020Model/
+!2020Model/CreateSinglePolicy_InputsRuns.bat
+
 # Policies
 !Policies/
 !Policies/Adjust_TR_Calib_Passenger.jl
