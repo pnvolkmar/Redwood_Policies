@@ -1,7 +1,7 @@
 #
 # ResCom_EIP.jl  - NRCan RDD Projects. 
 #
-# last updated by Alex Dumas on 2019-10-24
+# Last updated by Yang Li on 2024-06-12
 # More details about this policy are available in the following file: 
 # \\ncr.int.ec.gc.ca\shares\e\ECOMOD\Documentation\Policy - Buildings Policies.docx
 #
@@ -108,7 +108,7 @@ function ResPolicy(db)
   #
   @. Change = 1.0
 
-  years = collect(Yr(2022):Yr(2026))
+  years = collect(Yr(2023):Yr(2026))
   for year in years, ec in ECs
     Change[ec,year] = 1.066
   end
@@ -293,7 +293,7 @@ function ComPolicy(db)
   #
   @. Change = 1.0
 
-  years = collect(Yr(2022):Yr(2026))
+  years = collect(Yr(2023):Yr(2026))
   ecs = Select(EC,(from="Wholesale", to="OtherCommercial"))
   for year in years, ec in ecs
     Change[ec,year] = 1.02

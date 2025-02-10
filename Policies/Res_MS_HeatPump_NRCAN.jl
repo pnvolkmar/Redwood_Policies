@@ -5,6 +5,7 @@
 # Details about the underlying assumptions for this policy are available in the following file:
 # \\ncr.int.ec.gc.ca\shares\e\ECOMOD\Documentation\Policy - Buildings Policies.docx.
 # Timothy Timothy on 2023-08-22
+# Last updated by Yang Li on 2024-06-12
 #
 
 using SmallModel
@@ -64,7 +65,7 @@ function ResPolicy(db)
   # Specify values for desired fuel shares (xMMSF)
   #  
   BC = Select(Area,"BC")
-  ecs = Select(EC,["SingleFamily","MultiFamily"])
+  ecs = Select(EC,["SingleFamilyDetached", "SingleFamilyAttached","MultiFamily"])
 
   #    
   # Roughly 4% of new furnaces will be HeatPump, replacing Oil

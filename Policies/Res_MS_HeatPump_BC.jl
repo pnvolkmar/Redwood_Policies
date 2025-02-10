@@ -6,7 +6,7 @@
 # This policy simulates the the BC heat pump incentive which is part of the CleanBC plan.
 # Details about the underlying assumptions for this policy are available in the following file:
 # \\ncr.int.ec.gc.ca\shares\e\ECOMOD\Documentation\Policy - Buildings Policies.docx.
-# Last updated by Kevin Palmer-Wilson on 2023-06-09
+# Last updated by Yang Li on 2024-06-13
 #
 
 using SmallModel
@@ -65,10 +65,10 @@ function ResPolicy(db)
   # Specify values for desired fuel shares (xMMSF)
   # 
   BC = Select(Area,"BC")
-  ecs = Select(EC,["SingleFamily","MultiFamily"])
+  ecs = Select(EC,["SingleFamilyDetached","SingleFamilyAttached","MultiFamily"])
   Heat = Select(Enduse,"Heat")
   HeatPump = Select(Tech,"HeatPump")
-  years = collect(Yr(2022):Yr(2030))
+  years = collect(Yr(2023):Yr(2030))
 
   #
   # Roughly 3% of new furnaces will be HeatPump, replacing Gas

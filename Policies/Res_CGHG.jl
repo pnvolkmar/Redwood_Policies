@@ -18,7 +18,7 @@
 # The policy reduces energy demand by 16.1 PJ in 2026 in the residential sector. 
 # The assumption is that reductions increase linearly from 2021 to 2026 to reach that target.
 # We assume that 116 667 houses per year are retrofited per year, at a cost of $5000 each ($583.3 million per year)
-# Last updated by Kevin Palmer-Wilson on 2023-06-09
+# Last updated by Yang Li on 2024-06-12
 #
 
 using SmallModel
@@ -157,7 +157,7 @@ function ResPolicy(db)
   CN = Select(Nation,"CN")
   areas = findall(ANMap[:,CN] .== 1)
   enduses = Select(Enduse,["Heat","AC"])
-  years = collect(Yr(2022):Yr(2026))
+  years = collect(Yr(2023):Yr(2026))
 
   #
   # Total Demands
@@ -168,7 +168,6 @@ function ResPolicy(db)
   #
   # Policy results is a reduction in demand (PJ) converted to TBtu
   #  
-  ReductionAdditional[Yr(2022)] = 5.4
   ReductionAdditional[Yr(2023)] = 8.1
   ReductionAdditional[Yr(2024)] = 10.7
   ReductionAdditional[Yr(2025)] = 13.4
@@ -218,7 +217,6 @@ function ResPolicy(db)
   #
   # Program Costs
   #   
-  Expenses[Yr(2022)] = 583.3
   Expenses[Yr(2023)] = 583.3 
   Expenses[Yr(2024)] = 583.3
   Expenses[Yr(2025)] = 583.3
