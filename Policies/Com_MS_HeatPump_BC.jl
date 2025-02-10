@@ -7,7 +7,7 @@
 # Details about the underlying assumptions for this policy are available in the following file:
 # \\ncr.int.ec.gc.ca\shares\e\ECOMOD\Documentation\Policy - Buildings Policies.docx.
 # (A. Dumas 2020/06/25).
-# Last updated by Kevin Palmer-Wilson on 2023-06-09
+# Last updated by Yang Li on 2024-06-13
 #
 
 using SmallModel
@@ -63,7 +63,7 @@ function ComPolicy()
   # specify values for desired fuel shares (xMMSF)
   #  
   BC = Select(Area,"BC")  
-  years = collect(Yr(2022):Yr(2030)) 
+  years = collect(Yr(2023):Yr(2030)) 
   
   #
   # Roughly 10% of new furnaces will be HeatPump,replacing Gas

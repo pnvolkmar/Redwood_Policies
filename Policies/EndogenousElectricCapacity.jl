@@ -1,6 +1,18 @@
-#
+# 
 # EndogenousElectricCapacity.jl
-# Renewable and Non-Conventional Potential Capacity (MW)
+#
+# This file contains the maximum capacities that can be installed in each PT by yearly
+# GCPot refers to the absolute maximum while PjMax is the maximum that can be installed by year.
+# Some Ref23 values have been reviewed when working on the Clean Electricity Regulations
+# Thus, the 'CER values' have been implemented in Ref24 because they were more up to date
+# Consequently, EndogenousElectricCapacity_CER.txp won't be needed anymore
+#
+# IMPORTANT: AREA & NODE MUST BE SELECTED ONE BY ONE
+#            previously Areas and Nodes were selected in group (e.g. Select Area(ON-NL), Node(ON-NL))
+#            but it was found causing important errors in simulation.
+#            
+#
+# Updated by Thomas D. (August 2024)
 #
 
 using SmallModel
@@ -21,14 +33,10 @@ Base.@kwdef struct EControl
   CalDB::String = "ECalDB"
   Input::String = "EInput"
   Outpt::String = "EOutput"
-  BCNameDB::String = ReadDisk(db,"E2020DB/BCNameDB") #  Base Case Name
 
   Area::SetArray = ReadDisk(db,"E2020DB/AreaKey")
   AreaDS::SetArray = ReadDisk(db,"E2020DB/AreaDS")
   Areas::Vector{Int} = collect(Select(Area))
-  Nation::SetArray = ReadDisk(db,"E2020DB/NationKey")
-  NationDS::SetArray = ReadDisk(db,"E2020DB/NationDS")
-  Nations::Vector{Int} = collect(Select(Nation))
   Node::SetArray = ReadDisk(db,"E2020DB/NodeKey")
   NodeDS::SetArray = ReadDisk(db,"E2020DB/NodeDS")
   Nodes::Vector{Int} = collect(Select(Node))
@@ -39,708 +47,820 @@ Base.@kwdef struct EControl
   YearDS::SetArray = ReadDisk(db,"E2020DB/YearDS")
   Years::Vector{Int} = collect(Select(Year))
 
-  ANMap::VariableArray{2} = ReadDisk(db,"E2020DB/ANMap") # [Area,Nation] Map between Area and Nation
   GCPA::VariableArray{3} = ReadDisk(db,"EOutput/GCPA") # [Plant,Area,Year] Generation Capacity (MW)
   GCPot::VariableArray{4} = ReadDisk(db,"EGOutput/GCPot") # [Plant,Node,Area,Year] Maximum Potential Generation Capacity (MW)
   NdArFr::VariableArray{3} = ReadDisk(db,"EGInput/NdArFr") # [Node,Area,Year] Fraction of the Node in each Area (MW/MW)
   PjMax::VariableArray{2} = ReadDisk(db,"EGInput/PjMax") # [Plant,Area] Maximum Project Size (MW)
   xGCPot::VariableArray{4} = ReadDisk(db,"EGInput/xGCPot") # [Plant,Node,Area,Year] Exogenous Maximum Potential Generation Capacity (MW)
-end
+end 
 
+function NodeAreaIndex(data, Ind)
+  (; Area, Node) = data 
+  if Area[Ind] == "NL"
+    return Select(Node, ["NL", "LB"])
+  else 
+    return Select(Node, Area[Ind])
+  end
+end
+  
 function ElecPolicy(db)
   data = EControl(; db)
-  (; Area,Areas,Nation) = data
-  (; Node,Nodes,Plant) = data
-  (; Years) = data
-  (; ANMap,GCPA,PjMax,xGCPot) = data
-
-  cn_areas = Select(ANMap[Areas,Select(Nation,"CN")],==(1))
-
-  AB = Select(Area,"AB")
-  AB_N = Select(Node,"AB")
-  BC = Select(Area,"BC")
-  BC_N = Select(Node,"BC")
-  SK = Select(Area,"SK")
-  SK_N = Select(Node,"SK")
-  MB = Select(Area,"MB")
-  MB_N = Select(Node,"MB")
-  NB = Select(Area,"NB")
-  NB_N = Select(Node,"NB")
-  NL = Select(Area,"NL")
-  NS = Select(Area,"NS")
-  NS_N = Select(Node,"NS")
-  NU = Select(Area,"NU")
-  NU_N = Select(Node,"NU")
-  ON = Select(Area,"ON")
-  ON_N = Select(Node,"ON")
-  PE = Select(Area,"PE")
-  PE_N = Select(Node,"PE")
-  QC = Select(Area,"QC")
-  QC_N = Select(Node,"QC")
-  YT = Select(Area,"YT")
+  (; Area,Areas,Node,Nodes,Plant,Plants,Year,Years) = data
+  (; GCPA,PjMax,xGCPot) = data
 
   #
-  # GCPot Section
+  # Reset GCPot for Canada
   #
-  # OGCC and SmallOGCC
-  #
-  plants = Select(Plant,["OGCC","SmallOGCC"])
-  nodes = Select(Node,["ON","AB","SK"])
-  areas = Select(Area,["ON","AB","SK"])
-  years = collect(Future:Yr(2024))
-  for year in years, area in areas, node in nodes, plant in plants
-    xGCPot[plant,node,area,year] = GCPA[plant,area,year] + 100 
+  areas = Select(Area,["ON","QC","BC","NB","NS","NL","PE","AB","MB","SK","NT","NU","YT"])
+  
+  for area in areas
+    nodes = NodeAreaIndex(data,area)
+    for year in Years, node in nodes, plant in Plants
+      xGCPot[plant,node,area,year] = 0
+    end
   end
   
-  years = collect(Yr(2025):Final)
-  for year in years, area in areas, node in nodes, plant in plants
-    xGCPot[plant,node,area,year] = 1e6
+  # No development for the following plant types:
+  # Biogas, Biomass, Coal, CoalCCS, Geothermal, FuelCell, OGSteam,
+  # OtherGeneration, PumpedHydro, SolarThermal, Tidal, Waste, Unknown
+  plants = Select(Plant, ["Biogas", "Biomass", "Coal","CoalCCS","Geothermal", "FuelCell","OGSteam","OtherGeneration","PumpedHydro","SolarThermal","Tidal","Waste"])
+  years = collect(Future:Final)
+  for area in areas
+    nodes = NodeAreaIndex(data,area)
+    for plant in plants, node in nodes, year in years
+      xGCPot[plant,node,area,year] = GCPA[plant,area,Yr(2021)]
+    end
   end
-  
-  years = collect(Future:Yr(2027))
-  for year in years, plant in plants
-    xGCPot[plant,SK_N,SK,year] = 0
+  #
+  # OGCC
+  #
+  plants = Select(Plant, "OGCC")
+  years = collect(Future:Final)
+  areas = Select(Area,["ON", "QC","BC","NL","PE","NT","NU","YT"])
+  for area in areas
+    nodes = NodeAreaIndex(data,area)
+    for plant in plants, node in nodes, year in years
+      xGCPot[plant,node,area,year] = GCPA[plant,area,Yr(2021)]
+    end
   end
-
   #
-  # Limited capacity for NS
-  #
-  years = collect(Yr(2026):Final)
-  for year in years, plant in plants
-    xGCPot[plant,NS_N,NS,year] = 1500
+  # No Limit
+  # 
+  areas = Select(Area,["AB","SK","NB","NS"])
+  for area in areas
+    nodes = NodeAreaIndex(data,area)
+    for plant in plants, node in nodes, year in years
+      xGCPot[plant,node,area,year] = 1000000
+    end
   end
-
-  #
-  # No capacity for other
-  #
-  nodes = Select(Node,["QC","BC","MB","PE","NL","LB","YT","NT","NU"])
-  areas = Select(Area,["QC","BC","MB","PE","NL","YT","NT","NU"])
-  for year in years, area in areas, node in nodes, plant in plants
-    xGCPot[plant,node,area,year] = 0
+  area = Select(Area, "MB")
+  nodes = NodeAreaIndex(data,area)
+  for plant in plants, node in nodes, year in years
+    xGCPot[plant,node,area,year] = 3000
   end
-
+  #
+  # SmallOGCC
+  #
+  plants = Select(Plant, "SmallOGCC")
+  years = collect(Future:Final)
+  areas = Select(Area,["ON", "QC","BC","MB","NL","PE","NT","NU","YT"])
+  for area in areas
+    nodes = NodeAreaIndex(data,area)
+    for plant in plants, node in nodes, year in years
+      xGCPot[plant,node,area,year] = GCPA[plant,area,Yr(2021)]
+    end
+  end
+  # No Limit
+  areas = Select(Area, ["AB","SK","NB","NS"])
+  for area in areas
+    nodes = NodeAreaIndex(data,area)
+    for plant in plants, node in nodes, year in years
+      xGCPot[plant,node,area,year] = 1000000
+    end
+  end
   #
   # OGCT
   #
-  OGCT = Select(Plant,"OGCT")
-  areas = Select(Area,["BC","PE","QC","NL"])
-  nodes = Select(Node,["BC","PE","QC","NL"])
+  plants = Select(Plant, "OGCT")
   years = collect(Future:Final)
-  for year in years, area in areas, node in nodes
-    xGCPot[OGCT,node,area,year] = 0
+  # No development
+  areas = Select(Area, ["QC","BC","NL"])
+  for area in areas
+    nodes = NodeAreaIndex(data,area)
+    for plant in plants, node in nodes, year in years
+      xGCPot[plant,node,area,year] = GCPA[plant,area,Yr(2021)]
+    end
   end
-  
-  areas = Select(Area,["ON","AB","SK"])
-  nodes = Select(Node,["ON","AB","SK"])
-  years = collect(Future:Yr(2024))
-  for year in years, area in areas, node in nodes
-    xGCPot[OGCT,node,area,year] = GCPA[OGCT,area,year] + 20 
+  # limited development
+  areas = ["NT","NU","YT"]
+  areas = Select(Area, ["QC","BC","NL"])
+  for area in areas
+    nodes = NodeAreaIndex(data,area)
+    for plant in plants, node in nodes, year in years
+      xGCPot[plant,node,area,year] = GCPA[plant,area,Yr(2021)] + 20
+    end
   end
-
+  area = Select(Area, "PE")
+  node = NodeAreaIndex(data, area)
+  for plant in plants, year in years
+    xGCPot[plant,node,area,year] = GCPA[plant,area,Yr(2021)] + 140
+  end
+  area = Select(Area, "MB")
+  node = NodeAreaIndex(data, area)
+  for plant in plants, year in years
+    xGCPot[plant,node,area,year] = 7000
+  end    
+  # No Limit
+  areas = Select(Area, ["ON","AB","SK","NB"])
+  for area in areas
+    nodes = NodeAreaIndex(data,area)
+    for plant in plants, node in nodes, year in years
+      xGCPot[plant,node,area,year] = 1000000
+    end
+  end
   #
-  # PeakHydro
+  # NGCCS
   #
-  PeakHydro = Select(Plant,"PeakHydro")
-  areas = Select(Area,["ON","QC","BC","MB","NL"])
-  nodes = Select(Node,["ON","QC","BC","MB","NL"])
-  years = collect(Yr(2033):Final)
-  for year in years, area in areas, node in nodes
-    xGCPot[PeakHydro,node,area,year] = 1e6
-  end
-
-  #
-  # Solar PV
-  #
-  SolarPV = Select(Plant,"SolarPV")
-  area1 = Select(Area,(from = "ON",to = "BC"))
-  areas = union(area1,SK)
-  node1 = Select(Node,(from = "ON",to = "BC"))
-  nodes = union(node1,SK_N)
-  for year in Years, area in areas, node in nodes
-    xGCPot[SolarPV,node,area,year] = 7500
-  end
-  
-  for year in Years, node in nodes
-    xGCPot[SolarPV,node,SK,year] = 5000
-  end
-
-  area1 = Select(Area,(from = "NB",to = "NL"))
-  areas = union(area1,MB)
-  node1 = Select(Node,(from = "NB",to = "NL"))
-  nodes = union(node1,MB_N)
-  for year in Years, area in areas, node in nodes
-    xGCPot[SolarPV,node,area,year] = 1000
-  end
-  
-  for year in Years, node in nodes
-    xGCPot[SolarPV,node,PE,year] = 20
-  end
-  
-  areas = Select(Area,(from = "YT",to = "NU"))
-  nodes = Select(Node,(from = "YT",to = "NU"))
-  for year in Years, area in areas, node in nodes
-    xGCPot[SolarPV,node,area,year] = 10
-  end
-  
-  #
-  area1 = Select(Area,(from = "ON",to = "BC"))
-  areas = union(area1,SK)
-  node1 = Select(Node,(from = "ON",to = "BC"))
-  nodes = union(node1,SK_N)
-  years = collect(Yr(2022):Yr(2024))
-  for year in years, area in areas, node in nodes
-    xGCPot[SolarPV,node,area,year] = GCPA[SolarPV,area,year] + 300
-  end
-  
-  area1 = Select(Area,(from = "NB",to = "NL"))
-  areas = union(area1,MB)
-  node1 = Select(Node,(from = "NB",to = "NL"))
-  nodes = union(node1,MB_N)
-  for year in years, area in areas, node in nodes
-    xGCPot[SolarPV,node,area,year] = GCPA[SolarPV,area,year] + 100
-  end
-  
-  for year in years
-    xGCPot[SolarPV,PE_N,PE,year] = GCPA[SolarPV,PE,year] + 5
-  end
-  
-  areas = Select(Area,(from = "YT",to = "NU"))
-  nodes = Select(Node,(from = "YT",to = "NU"))
-  for year in years, area in areas, node in nodes
-    xGCPot[SolarPV,node,area,year] = GCPA[SolarPV,area,year] + 1
-  end
-  
-  #
-  years = collect(Yr(2022):Yr(2030))
-  for year in years, area in areas, node in nodes
-    xGCPot[SolarPV,node,area,year] = GCPA[SolarPV,area,year] + 1
-  end
-  
-  for year in years
-    xGCPot[SolarPV,NS_N,NS,year] = 300
-  end
-
-  nodes = Select(Node,["NL","LB"])
-  for year in years, node in nodes
-    xGCPot[SolarPV,node,NL,year] = 150
-  end
-
-  #
-  # Ref23: we limit new endo development in QC because it seems to be added to meet capacity demand
-  # but then, it generates large amounts of electricity (because of mustrun=1)
-  # that significantly increases the export to the US (~ 20 TWh)
-  #
-  years = collect(Yr(2027):Final)
-  for year in years
-    xGCPot[SolarPV,QC_N,QC,year] = 5000
-  end
-
-  #
-  # AB: We limit addition because the short term projects are already known (AESO LTA reports)
-  #
-  years = collect(Future:Yr(2026))
-  for year in years
-    xGCPot[SolarPV,AB_N,AB,year] = GCPA[SolarPV,AB,year]
-  end
-  
-  years = collect(Yr(2027):Yr(2030))
-  for year in years
-    xGCPot[SolarPV,AB_N,AB,year] = 3800
-  end
-
-  #
-  # Offshore Wind
-  #
-  OffshoreWind = Select(Plant,"OffshoreWind")
-  areas = Select(Area,(from = "ON",to = "NU"))
-  nodes = Select(Node,(from = "ON",to = "NU"))
-  years = collect(Yr(2020):Final)
-  for year in years, area in areas, node in nodes
-    xGCPot[OffshoreWind,node,area,year] = 0
-  end
-
-  areas = Select(Area,["NB","NS"])
-  nodes = Select(Node,["NB","NS"])
-  years = collect(Yr(2033):Final)
-  for year in years, area in areas, node in nodes
-    xGCPot[OffshoreWind,node,area,year] = 500
-  end
-
-  areas = Select(Area,["BC","NS"])
-  nodes = Select(Node,["BC","NS"])
-  years = collect(Yr(2033):Final)
-  for year in years, area in areas, node in nodes
-    xGCPot[OffshoreWind,node,area,year] = 1000
-  end
-
-  areas = Select(Area,["AB","SK","ON","MB"])
-  nodes = Select(Node,["AB","SK","ON","MB"])
-  years = collect(Yr(2033):Final)
-  for year in years, area in areas, node in nodes
-    xGCPot[OffshoreWind,node,area,year] = 0
-  end
-
-  #
-  # Solar Thermal
-  #
-  SolarThermal = Select(Plant,"SolarThermal")
-  years = collect(Yr(2020):Final)
-  for year in years, area in cn_areas, node in Nodes
-    xGCPot[SolarThermal,node,area,year] = 0
-  end
-
-  #
-  # Unknown
-  #
-  Unknown = Select(Plant,"Unknown")
-  for year in years, area in cn_areas, node in Nodes
-    xGCPot[Unknown,node,area,year] = 0
-  end
-
-  #
-  # Nuclear
-  #  
-  Nuclear = Select(Plant,"Nuclear")
-  years = collect(Yr(2020):Final)
-  for year in years, area in cn_areas, node in Nodes
-    xGCPot[Nuclear,node,area,year] = 0
-  end
-  
-  years = collect(Yr(2026):Final)
-  for year in years
-    xGCPot[Nuclear,ON_N,ON,year] = 10620
-  end
-  
-  years = collect(Yr(2033):Final)
-  for year in years
-    xGCPot[Nuclear,ON_N,ON,year] = 1e6
-  end
-  
-  for year in years
-    xGCPot[Nuclear,NB_N,NB,year] = 1e6
-  end
-  
-  areas = Select(Area,["AB","SK"])
-  nodes = Select(Node,["AB","SK"])
-  years = collect(Yr(2030):Final)
-  for year in years, area in areas, node in nodes
-    xGCPot[Nuclear,node,area,year] = 300
-  end
-  
-  years = collect(Yr(2033):Final)
-  for year in years, area in areas, node in nodes
-    xGCPot[Nuclear,node,area,year] = 1e6
-  end
-
-  #
-  # Fuel Cell
-  #  
-  FuelCell = Select(Plant,"FuelCell")
-  for year in Years, area in cn_areas, node in Nodes
-    xGCPot[FuelCell,node,area,year] = 0
-  end
-
-  #
-  # NG CCS
-  #  
-  NGCCS = Select(Plant,"NGCCS")
-  for year in Years, area in cn_areas, node in Nodes
-    xGCPot[NGCCS,node,area,year] = 0
-  end
-  
-  areas = Select(Area,["AB","SK","MB"])
-  years = collect(Yr(2029):Final)
-  for year in years, area in areas, node in Nodes
-    xGCPot[NGCCS,node,area,year] = 1e6
-  end
-
-  #
-  # Coal CCS
-  #  
-  areas = Select(Area,(from = "ON",to = "NU"))
-  CoalCCS = Select(Plant,"CoalCCS")
+  plants = Select(Plant, "NGCCS")
   years = collect(Future:Final)
-  for year in years, area in areas, node in Nodes
-    xGCPot[CoalCCS,node,area,year] = 0
+  # No development
+  areas = Select(Area, ["BC","ON","QC","NB","NS","NL","PE","NT","NU","YT"])
+  for area in areas
+    nodes = NodeAreaIndex(data,area)
+    for plant in plants, node in nodes, year in years
+      xGCPot[plant,node,area,year] = GCPA[plant,area,Yr(2021)]
+    end
   end
-
+  # No Limit
+  areas = Select(Area, ["AB","MB","SK"])
+  for area in areas
+    nodes = NodeAreaIndex(data,area)
+    for plant in plants, node in nodes, year in years
+      xGCPot[plant,node,area,year] = 1000000
+    end
+  end
+  #
+  # BiomassCCS
+  #
+  plants = Select(Plant, "BiomassCCS")
+  years = collect(Future:Final)
+  # No development
+  areas = Select(Area, ["BC","ON","QC","NB","NS","NL","PE","NT","NU","YT"])
+  for area in areas
+    nodes = NodeAreaIndex(data,area)
+    for plant in plants, node in nodes, year in years
+      xGCPot[plant,node,area,year] = GCPA[plant,area,Yr(2021)]
+    end
+  end
+  # No Limit
+  areas = Select(Area, ["AB","MB","SK"])
+  for area in areas
+    nodes = NodeAreaIndex(data,area)
+    for plant in plants, node in nodes, year in years
+      xGCPot[plant,node,area,year] = 1000000
+    end
+  end
   #
   # BaseHydro
-  # 
-  BaseHydro = Select(Plant,"BaseHydro")
-  area1 = Select(Area,(from = "ON",to = "NL"))
-  area2 = Select(Area,(from = "YT",to = "NU"))
-  areas = union(area1,area2)
-  for year in Years, area in areas, node in Nodes
-    xGCPot[BaseHydro,node,area,year] = 0
-  end
+  #
+  plants = Select(Plant, "BaseHydro")
   
-  years = collect(Yr(2029):Final)
-  for year in years, area in areas, node in Nodes
-    xGCPot[BaseHydro,node,area,year] = 1e6
+  # No development
+  areas = Select(Area, ["PE","NU"])
+  for area in areas
+    nodes = NodeAreaIndex(data,area)
+    for plant in plants, node in nodes, year in years
+      xGCPot[plant,node,area,year] = GCPA[plant,area,Yr(2021)]
+    end
   end
-  
-  areas = Select(Area,["AB","SK"])
-  nodes = Select(Node,["AB","SK"])
-  for year in years, area in areas, node in nodes
-    xGCPot[BaseHydro,node,area,year] = GCPA[BaseHydro,area,year] + 1000 
+
+  # Limited development
+  area_limits = [("ON", 6408), ("QC", 3961), ("BC", 2819.20), 
+                 ("AB", 1000), ("MB", 8329.94), ("SK", 200),
+                 ("NB", 2.6), ("NL", 159.71)]
+  for (area_name, increment) in area_limits
+    area = Select(Area, area_name)
+    nodes = NodeAreaIndex(data,area)
+    for plant in plants, node in nodes, year in years
+      xGCPot[plant,node,area,year] = GCPA[plant,area,Yr(2021)] + increment
+    end
   end
-  
-  for year in years
-    xGCPot[BaseHydro,NS_N,NS,year] = 600
-    xGCPot[BaseHydro,ON_N,ON,year] = 2000
-    xGCPot[BaseHydro,NU_N,NU,year] = 0
-    xGCPot[BaseHydro,BC_N,BC,year] = 500
-  end
-  
-  years = collect(Yr(2034):Final)
-  for year in years
-    xGCPot[BaseHydro,BC_N,BC,year] = 1000
-  end
-  
-  years = collect(Yr(2038):Final)
-  for year in years
-    xGCPot[BaseHydro,BC_N,BC,year] = 1500
+
+  # No limit
+  areas = Select(Area, ["NT","YT"])
+  for area in areas
+    nodes = NodeAreaIndex(data,area)
+    for plant in plants, node in nodes, year in years
+      xGCPot[plant,node,area,year] = 1000000
+    end
   end
 
   #
   # SmallHydro
-  #  
-  SmallHydro = Select(Plant,"SmallHydro")
-  area1 = Select(Area,(from = "ON",to = "NL"))
-  area2 = Select(Area,(from = "YT",to = "NU"))
-  areas = union(area1,area2)
-  for year in Years, area in areas, node in Nodes
-    xGCPot[SmallHydro,node,area,year] = 0
-  end
-  
-  years = collect(Yr(2029):Final)
-  for year in years, area in areas, node in Nodes
-    xGCPot[SmallHydro,node,area,year] = 1e6
-  end
-  
-  for year in years
-    xGCPot[SmallHydro,NB_N,NB,year] = 95
-    xGCPot[SmallHydro,NS_N,NS,year] = 40
-    xGCPot[SmallHydro,NU_N,NU,year] = 0
-  end
-
   #
-  # Waste
-  #  
-  Waste = Select(Plant,"Waste")
-  areas = Select(Area,(from = "ON",to = "NU"))
-  nodes = Select(Node,(from = "ON",to = "NU"))
-  for year in Years, area in areas, node in nodes
-    xGCPot[Waste,node,area,year] = 0
+  plants = Select(Plant, "SmallHydro")
+  years = collect(Future:Final)
+
+  # No development
+  areas = Select(Area, ["AB","PE","NU"])
+  for area in areas
+    nodes = NodeAreaIndex(data,area)
+    for plant in plants, node in nodes, year in years
+      xGCPot[plant,node,area,year] = GCPA[plant,area,Yr(2021)]
+    end
   end
 
+  # Limited development
+  area_limits = [
+    ("ON", 3105),
+    ("QC", 63),
+    ("BC", 1118.76),
+    ("MB", 77.06),
+    ("SK", 200)
+  ]
+  for (area_name, increment) in area_limits
+    area = Select(Area, area_name)
+    nodes = NodeAreaIndex(data,area)
+    for plant in plants, node in nodes, year in years
+      xGCPot[plant,node,area,year] = GCPA[plant,area,Yr(2021)] + increment
+    end
+  end
+
+  # Areas with no increment
+  areas = Select(Area, ["NB","NS"])
+  for area in areas
+    nodes = NodeAreaIndex(data,area)
+    for plant in plants, node in nodes, year in years
+      xGCPot[plant,node,area,year] = GCPA[plant,area,Yr(2021)]
+    end
+  end
+
+  # NL development periods
+  area = Select(Area, "NL")
+  nodes = NodeAreaIndex(data,area)
+
+  years = collect(Future:Yr(2028))
+  for plant in plants, node in nodes, year in years
+    xGCPot[plant,node,area,year] = GCPA[plant,area,Yr(2021)]
+  end
+
+  years = collect(Yr(2029):Final)
+  for plant in plants, node in nodes, year in years
+    xGCPot[plant,node,area,year] = 1000000
+  end
+
+  # No limit areas
+  areas = Select(Area, ["NT","YT"])
+  for area in areas
+    nodes = NodeAreaIndex(data,area)
+    for plant in plants, node in nodes, year in years
+      xGCPot[plant,node,area,year] = 1000000
+    end
+  end
+  
+  #
+  # PeakHydro
+  #
+  plants = Select(Plant, "PeakHydro")
+  years = collect(Future:Final)
+
+  # No development
+  areas = Select(Area, ["ON","AB","MB","NS","PE","NT","NU","YT"])
+  for area in areas
+    nodes = NodeAreaIndex(data,area)
+    for plant in plants, node in nodes, year in years
+      xGCPot[plant,node,area,year] = GCPA[plant,area,Yr(2021)]
+    end
+  end
+
+  # Limited development
+  area_limits = [
+    ("BC", 26354.04),
+    ("NB", 577.4),
+    ("NL", 8394.29),
+    ("QC", 36218.7)
+  ]
+  for (area_name, increment) in area_limits
+    area = Select(Area, area_name)
+    nodes = NodeAreaIndex(data,area)
+    for plant in plants, node in nodes, year in years
+      xGCPot[plant,node,area,year] = GCPA[plant,area,Yr(2021)] + increment
+    end
+  end
+
+  # SK development periods
+  area = Select(Area, "SK")
+  nodes = NodeAreaIndex(data,area)
+
+  years = collect(Future:Yr(2034))
+  for plant in plants, node in nodes, year in years
+    xGCPot[plant,node,area,year] = GCPA[plant,area,Yr(2021)] + 60
+  end
+
+  years = collect(Yr(2035):Final)
+  for plant in plants, node in nodes, year in years
+    xGCPot[plant,node,area,year] = GCPA[plant,area,Yr(2021)] + 410
+  end
+  
   #
   # OnshoreWind
-  #  
-  OnshoreWind = Select(Plant,"OnshoreWind")
-  for year in Years
-    xGCPot[OnshoreWind,ON_N,ON,year] = 20000
-    xGCPot[OnshoreWind,SK_N,SK,year] = 10000
+  #
+  plants = Select(Plant, "OnshoreWind")
+  years = collect(Future:Final)
+
+  # Fixed increment development
+  area_limits = [
+    ("BC", 15000),
+    ("ON", 15000),
+    ("MB", 6000),
+    ("NL", 1000),
+    ("PE", 200),
+    ("NT", 10),
+    ("NU", 10),
+    ("YT", 10)
+  ]
+  for (area_name, increment) in area_limits
+    area = Select(Area, area_name)
+    nodes = NodeAreaIndex(data,area)
+    for plant in plants, node in nodes, year in years
+      xGCPot[plant,node,area,year] = GCPA[plant,area,Yr(2021)] + increment
+    end
+  end
+
+  # Three-period development
+  dev_schedule = [
+    ("AB", [(Future, Yr(2024), 0), (Yr(2025), Yr(2029), 9000), (Yr(2030), Final, 15000)]),
+    ("SK", [(Future, Yr(2024), 0), (Yr(2025), Yr(2029), 1678), (Yr(2030), Final, 5000)]),
+    ("NS", [(Future, Yr(2024), 0), (Yr(2025), Yr(2029), 1500), (Yr(2030), Final, 5000)])
+  ]
+
+  for (area_name, periods) in dev_schedule
+    area = Select(Area, area_name)
+    nodes = NodeAreaIndex(data,area)
+    for (start_year, end_year, increment) in periods
+      years = collect(start_year:end_year)
+      for plant in plants, node in nodes, year in years
+        xGCPot[plant,node,area,year] = GCPA[plant,area,Yr(2021)] + increment
+      end
+    end
+  end
+
+  # Two-period development
+  dev_schedule = [
+    ("QC", [(Future, Yr(2030), 0), (Yr(2031), Final, 7500)]),
+    ("NB", [(Future, Yr(2030), 0), (Yr(2031), Final, 2000)])
+  ]
+
+  for (area_name, periods) in dev_schedule
+    area = Select(Area, area_name)
+    nodes = NodeAreaIndex(data,area)
+    for (start_year, end_year, increment) in periods
+      years = collect(start_year:end_year)
+      for plant in plants, node in nodes, year in years
+        xGCPot[plant,node,area,year] = GCPA[plant,area,Yr(2021)] + increment
+      end
+    end
   end
   
-  areas = Select(Area,["QC","BC"])
-  nodes = Select(Node,["QC","BC"])
-  for year in Years, area in areas, node in nodes
-    xGCPot[OnshoreWind,node,area,year] = 15000
+  #
+  # OffshoreWind
+  #
+  plants = Select(Plant, "OffshoreWind")
+  years = collect(Future:Final)
+
+  # No development
+  areas = Select(Area, ["ON","QC","PE","AB","MB","SK","NB","NT","NU","YT"])
+  for area in areas
+    nodes = NodeAreaIndex(data,area)
+    for plant in plants, node in nodes, year in years
+      xGCPot[plant,node,area,year] = GCPA[plant,area,Yr(2021)]
+    end
+  end
+
+  # Two-period development
+  dev_schedule = [
+    ("BC", 1000),
+    ("NS", 500),
+    ("NL", 1000)
+  ]
+
+  for (area_name, increment) in dev_schedule
+    area = Select(Area, area_name)
+    nodes = NodeAreaIndex(data,area)
+    
+    years = collect(Future:Yr(2034))
+    for plant in plants, node in nodes, year in years
+      xGCPot[plant,node,area,year] = GCPA[plant,area,Yr(2021)]
+    end
+    
+    years = collect(Yr(2035):Final)
+    for plant in plants, node in nodes, year in years
+      xGCPot[plant,node,area,year] = GCPA[plant,area,Yr(2021)] + increment
+    end
   end
   
-  areas = Select(Area,["MB","NB","NS"])
-  nodes = Select(Node,["MB","NB","NS"])
-  for year in Years, area in areas, node in nodes
-    xGCPot[OnshoreWind,node,area,year] = 5000
+  #
+  # SolarPV
+  #
+  plants = Select(Plant, "SolarPV")
+  years = collect(Future:Final)
+
+  # Fixed increment development
+  area_limits = [
+    ("ON", 7500),
+    ("QC", 5000),
+    ("BC", 7500),
+    ("MB", 3000),
+    ("NB", 1000),
+    ("SK", 1000),
+    ("PE", 100),
+    ("NT", 10),
+    ("NU", 10),
+    ("YT", 10)
+  ]
+  for (area_name, increment) in area_limits
+    area = Select(Area, area_name)
+    nodes = NodeAreaIndex(data,area)
+    for plant in plants, node in nodes, year in years
+      xGCPot[plant,node,area,year] = GCPA[plant,area,Yr(2021)] + increment
+    end
+  end
+
+  # Three-period development
+  dev_schedule = [
+    ("AB", [(Future, Yr(2024), 0), (Yr(2025), Yr(2029), 5350), (Yr(2030), Final, 7500)]),
+    ("NS", [(Future, Yr(2024), 0), (Yr(2025), Yr(2029), 300), (Yr(2030), Final, 1000)]),
+    ("NL", [(Future, Yr(2024), 0), (Yr(2025), Yr(2029), 150), (Yr(2030), Final, 1000)])
+  ]
+
+  for (area_name, periods) in dev_schedule
+    area = Select(Area, area_name)
+    nodes = NodeAreaIndex(data,area)
+    for (start_year, end_year, increment) in periods
+      years = collect(start_year:end_year)
+      for plant in plants, node in nodes, year in years
+        xGCPot[plant,node,area,year] = GCPA[plant,area,Yr(2021)] + increment
+      end
+    end
   end
   
-  nodes = Select(Node,["NL","LB"])
-  for year in Years, node in nodes
-    xGCPot[OnshoreWind,node,NL,year] = 1000
+  #
+  # Wave
+  #
+  plants = Select(Plant, "Wave")
+  years = collect(Future:Final)
+
+  # No development
+  areas = Select(Area, ["ON","QC","BC","NB","NL","PE","AB","MB","SK","NT","NU","YT"])
+  for area in areas
+    nodes = NodeAreaIndex(data,area)
+    for plant in plants, node in nodes, year in years
+      xGCPot[plant,node,area,year] = GCPA[plant,area,Yr(2021)]
+    end
   end
-  for year in Years
-    xGCPot[OnshoreWind,PE_N,PE,year] = 200
+
+  # Three-period development for NS
+  area = Select(Area, "NS")
+  nodes = NodeAreaIndex(data,area)
+  dev_schedule = [
+    (Future, Yr(2024), 10),
+    (Yr(2025), Yr(2029), 9.65),
+    (Yr(2030), Final, 1000000)
+  ]
+
+  for (start_year, end_year, increment) in dev_schedule
+    years = collect(start_year:end_year)
+    for plant in plants, node in nodes, year in years
+      if increment == 1000000
+        xGCPot[plant,node,area,year] = increment
+      else
+        xGCPot[plant,node,area,year] = GCPA[plant,area,Yr(2021)] + increment
+      end
+    end
   end
   
-  areas = Select(Area,(from = "YT",to = "NU"))
-  nodes = Select(Node,(from = "YT",to = "NU"))
-  for year in Years, area in areas, node in nodes
-    xGCPot[OnshoreWind,node,area,year] = 10
+  #
+  # Battery (Energy Storage)
+  #
+  plants = Select(Plant, "Battery")
+  years = collect(Future:Final)
+
+  # No limit for all areas
+  areas = Select(Area, ["ON","QC","BC","NB","NS","NL","PE","AB","MB","SK","NT","NU","YT"])
+  for area in areas
+    nodes = NodeAreaIndex(data,area)
+    for plant in plants, node in nodes, year in years
+      xGCPot[plant,node,area,year] = 1000000
+    end
+  end
+  
+  #
+  # Nuclear and SMNR
+  #
+  plants = Select(Plant, ["Nuclear", "SMNR"])
+  # No development
+  years = collect(Future:Final)
+  areas = Select(Area, ["BC","NL","PE"])
+  for area in areas 
+    nodes = NodeAreaIndex(data, area)
+    for plant in plants, node in nodes, year in Years
+      xGCPot[plant,node,area,year] = GCPA[plant,area,Yr(2021)]
+    end
+  end
+  
+  #
+  # Nuclear specific settings
+  #
+  Nuclear = Select(Plant,"Nuclear")
+  
+  # No development
+  no_dev_areas = ["NT","NU","YT","MB","NB"]
+  for area_name in no_dev_areas
+    area = Select(Area,area_name)
+    nodes = NodeAreaIndex(data, area)
+    for node in nodes, year in years
+      xGCPot[Nuclear,node,area,year] = GCPA[Nuclear,area,Yr(2021)]
+    end
+  end
+
+  # Limited development with different time periods
+  # QC and ON through 2034
+  early_years = collect(Future:Yr(2034))
+  for area_name in ["QC","ON"]
+    area = Select(Area,area_name)
+    nodes = NodeAreaIndex(data, area)
+    for node in nodes, year in early_years
+      xGCPot[Nuclear,node,area,year] = GCPA[Nuclear,area,Yr(2021)]
+    end
+  end
+  
+  # QC and ON after 2034
+  later_years = collect(Yr(2035):Final)
+  for area_name in ["QC","ON"]
+    area = Select(Area,area_name)
+    nodes = NodeAreaIndex(data, area)
+    for node in nodes, year in later_years
+      xGCPot[Nuclear,node,area,year] = GCPA[Nuclear,area,Yr(2021)] + 10000
+    end
+  end
+  
+  # NS, AB, SK development periods
+  early_years = collect(Future:Yr(2034))
+  for area_name in ["NS","AB","SK"]
+    area = Select(Area,area_name)
+    nodes = NodeAreaIndex(data, area)
+    for node in nodes, year in early_years
+      xGCPot[Nuclear,node,area,year] = GCPA[Nuclear,area,Yr(2021)]
+    end
+  end
+  
+  later_years = collect(Yr(2035):Final)
+  area_limits = [("NS", 840), ("AB", 500), ("SK", 500)]
+  for (area_name, limit) in area_limits
+    area = Select(Area,area_name)
+    nodes = NodeAreaIndex(data, area)
+    for node in nodes, year in later_years
+      xGCPot[Nuclear,node,area,year] = GCPA[Nuclear,area,Yr(2021)] + limit
+    end
   end
 
   #
-  # AB: We limit addition in AB because the short term projects are already known (AESO LTA reports)
-  #  
-  years = collect(Future:Yr(2026))
-  for year in years
-    xGCPot[OnshoreWind,AB_N,AB,year] = GCPA[OnshoreWind,AB,year]
-  end
+  # SMNR specific settings
+  #
+  SMNR = Select(Plant,"SMNR")
   
-  years = collect(Yr(2027):Final)
-  for year in years
-    xGCPot[OnshoreWind,AB_N,AB,year] = 15000
+  # No development
+  for area_name in ["QC","NS"]
+    area = Select(Area,area_name)
+    nodes = NodeAreaIndex(data, area)
+    for node in nodes, year in years
+      xGCPot[SMNR,node,area,year] = GCPA[SMNR,area,Yr(2021)]
+    end
   end
 
-  #
-  # Ref23: we limit new endo development in QC because it seems to be 
-  # added to meet capacity demand but then, it generates large amounts 
-  # of electricity (because of mustrun=1) that significantly increases 
-  # the export to the US (~ 20 TWh)
-  #  
-  for year in years
-    xGCPot[OnshoreWind,QC_N,QC,year] = 10000
+  # ON development
+  area = Select(Area,"ON")
+  node = Select(Node,"ON")
+  early_years = collect(Future:Yr(2039))
+  for year in early_years
+    xGCPot[SMNR,node,area,year] = GCPA[SMNR,area,Yr(2021)]
+  end
+  later_years = collect(Yr(2040):Final)
+  for year in later_years
+    xGCPot[SMNR,node,area,year] = GCPA[SMNR,area,Yr(2021)] + 5390
   end
 
-  #
-  # Changed to Capacity plus 10 for Hydrogen Production - Jeff Amlin 8/2/22
-  # TD: no addition in AB
-  #
-  areas = Select(Area,(from = "ON",to = "BC"))
-  nodes = Select(Node,(from = "ON",to = "BC"))
-  for area in areas, node in nodes
-    xGCPot[OnshoreWind,node,area,Yr(2021)] = GCPA[OnshoreWind,area,Yr(2021)] + 10
+  # AB development periods
+  area = Select(Area,"AB")
+  node = Select(Node,"AB")
+  period1 = collect(Future:Yr(2029))
+  for year in period1
+    xGCPot[SMNR,node,area,year] = GCPA[SMNR,area,Yr(2021)]
   end
-  
-  areas = Select(Area,(from = "MB",to = "NU"))
-  nodes = Select(Node,(from = "MB",to = "NU"))
-  for area in areas, node in nodes
-    xGCPot[OnshoreWind,node,area,Yr(2021)] = GCPA[OnshoreWind,area,Yr(2021)] + 10
+  period2 = collect(Yr(2030):Yr(2039))
+  for year in period2
+    xGCPot[SMNR,node,area,year] = GCPA[SMNR,area,Yr(2021)] + 4420
   end
-  
-  #
-  years = collect(Yr(2022):Yr(2024))
-  for year in years
-    xGCPot[OnshoreWind,ON_N,ON,year] = GCPA[OnshoreWind,ON,year] + 200
-  end
-  
-  areas = Select(Area,["QC","BC","SK"])
-  nodes = Select(Node,["QC","BC","SK"])
-  for year in years, area in areas, node in nodes
-    xGCPot[OnshoreWind,node,area,year] = GCPA[OnshoreWind,area,year] + 100
-  end
-  
-  areas = Select(Area,["MB","NB","NS"])
-  nodes = Select(Node,["MB","NB","NS"])
-  for year in years, area in areas, node in nodes
-    xGCPot[OnshoreWind,node,area,year] = GCPA[OnshoreWind,area,year] + 100
-  end
-  
-  nodes = Select(Node,["NL","LB"])
-  for year in years, node in nodes
-    xGCPot[OnshoreWind,node,NL,year] = GCPA[OnshoreWind,NL,year] + 10 
-  end
-  
-  for year in years
-    xGCPot[OnshoreWind,PE_N,PE,year] = GCPA[OnshoreWind,PE,year] + 2
-  end
-  
-  years =collect(Yr(2022):Yr(2024))
-  areas = Select(Area,(from = "YT",to = "NU"))
-  nodes = Select(Node,(from = "YT",to = "NU"))
-  for year in years, area in areas, node in nodes
-    xGCPot[OnshoreWind,node,area,year] = GCPA[OnshoreWind,area,year] + 1
-  end
-  
-  #
-  # No addition in AB
-  #
-  # Select Area(AB), Node(AB)
-  # xGCPot=GCPA+150
-  #
-  areas = Select(Area,(from = "YT",to = "NU"))
-  nodes = Select(Node,(from = "YT",to = "NU"))
-  years = collect(Yr(2022):Yr(2030))
-  for year in years, area in areas, node in nodes
-    xGCPot[OnshoreWind,node,area,year] = GCPA[OnshoreWind,area,year] + 1
-  end
-  
-  areas = Select(Area,"NS")
-  nodes = Select(Node,"NS")
-  years = collect(Yr(2022):Yr(2030))
-  for year in years, area in areas, node in nodes
-    xGCPot[OnshoreWind,node,area,year] = 1500
+  period3 = collect(Yr(2040):Final)
+  for year in period3
+    xGCPot[SMNR,node,area,year] = GCPA[SMNR,area,Yr(2021)] + 14620
   end
 
-  #
-  # No addition in AB before 2027
-  #  
-  areas = Select(Area,"AB")
-  nodes = Select(Node,"AB")
-  years = collect(Yr(2022):Yr(2026))
-  for year in years, area in areas, node in nodes
-   xGCPot[OnshoreWind,node,area,year] = GCPA[OnshoreWind,area,year]
+  # SK development periods
+  area = Select(Area,"SK")
+  node = Select(Node,"SK")
+  period1 = collect(Future:Yr(2034))
+  for year in period1
+    xGCPot[SMNR,node,area,year] = GCPA[SMNR,area,Yr(2021)]
   end
-  
-  years =collect(Yr(2027):Yr(2030))
-  for year in years, area in areas, node in nodes
-    xGCPot[OnshoreWind,node,area,year] = 9000
+  period2 = collect(Yr(2035):Yr(2039))
+  for year in period2
+    xGCPot[SMNR,node,area,year] = GCPA[SMNR,area,Yr(2021)] + 600
   end
-  
-  #
-  # Biomass CCS
-  #  
-  BiomassCCS = Select(Plant,"BiomassCCS")
-  areas = Select(Area,(from = "ON",to = "NU"))
-  nodes = Select(Node,(from = "ON",to = "NU"))
-  for year in Years, area in areas, node in nodes
-    xGCPot[BiomassCCS,node,area,year] = 0
+  period3 = collect(Yr(2040):Final)
+  for year in period3
+    xGCPot[SMNR,node,area,year] = GCPA[SMNR,area,Yr(2021)] + 1500
+  end
+
+  # MB development
+  area = Select(Area,"MB")
+  node = Select(Node,"MB")
+  early_years = collect(Future:Yr(2030))
+  for year in early_years
+    xGCPot[SMNR,node,area,year] = GCPA[SMNR,area,Yr(2021)]
+  end
+  later_years = collect(Yr(2031):Final)
+  for year in later_years
+    xGCPot[SMNR,node,area,year] = GCPA[SMNR,area,Yr(2021)] + 1500
+  end
+
+  # NB development
+  area = Select(Area,"NB")
+  node = Select(Node,"NB")
+  early_years = collect(Future:Yr(2039))
+  for year in early_years
+    xGCPot[SMNR,node,area,year] = GCPA[SMNR,area,Yr(2021)]
+  end
+  later_years = collect(Yr(2040):Final)
+  for year in later_years
+    xGCPot[SMNR,node,area,year] = GCPA[SMNR,area,Yr(2021)] + 840
+  end
+
+  # No Limit areas
+  no_limit_areas = ["NT","NU","YT"]
+  for area_name in no_limit_areas
+    area = Select(Area,area_name)
+    nodes = NodeAreaIndex(data, area)
+    early_years = collect(Future:Yr(2029))
+    for node in nodes, year in early_years
+      xGCPot[SMNR,node,area,year] = GCPA[SMNR,area,Yr(2021)]
+    end
+    later_years = collect(Yr(2030):Final)
+    for node in nodes, year in later_years
+      xGCPot[SMNR,node,area,year] = 1e6
+    end
   end
 
   WriteDisk(db,"EGInput/xGCPot",xGCPot)
 
-  ############################
   #
   # PjMax Section
   #
-  # NFLD, Yukon, and Nunavut has no natural gas capacity
-  #
-  OGCC = Select(Plant,"OGCC")
-  areas = Select(Area,["YT","NU"])
-  # JSO Change
-  for area in areas
-    PjMax[OGCC,area] = 99999
-  end
-  # JSO Change
-  OGSteam = Select(Plant,"OGSteam")
-  for area in areas
-    PjMax[OGSteam,area] = 99999
+  
+  # Peakhydro
+  PeakHydro = Select(Plant,"PeakHydro")
+  area_limits = [
+    ("ON", 100),
+    ("MB", 200),
+    ("QC", 300),
+    ("YT", 15)
+  ]
+  for (area_name, limit) in area_limits
+    area = Select(Area,area_name)
+    PjMax[PeakHydro,area] = limit
   end
 
-  #
-  # Advanced Coal must be IGCC
-  #
-  # Select Plant(CoalAdvanced)
-  # PjMax=0
-  # Select Area(AB,SK)
-  # PjMax=99999
-  #
+  # Small Hydro
+  SmallHydro = Select(Plant,"SmallHydro")
   
-  #
-  # Quebec builds hydro instead of natural gas and oil
-  #
-  PjMax[PeakHydro,ON] = 100
- 
-  #
-  # JSO Change
-  # Select Plant(OGCC,OGCT)
-  # PjMax=0
-  #
-
-  #
-  # Manitoba builds hydro instead of natural gas and oil
-  #  
-  PjMax[PeakHydro,MB] = 200
-  plants = Select(Plant,["OGCC","OGCT"])
-  for plant in plants
-    PjMax[plant,MB] = 0
-  end
-  
-  #
-  plants = Select(Plant,["OGCC","OGCT","SmallOGCC"])
-  for plant in plants
-    PjMax[plant,NL] = 0
-  end
-  
-  #
-  PjMax[CoalCCS,AB] = 0
-
-  # Yukon builds small hydro - Jeff Amlin 11/07/16
-  PjMax[PeakHydro,YT] = 15
-
-  #
-  # John St-Laurent O'Connor 2021.10.15 Changes to cap yearly growth
-  # of some plant types in some areas
-  #  
-  areas = Select(Area,(from = "ON",to = "AB"))
-  OtherStorage = Select(Plant,"OtherStorage")
-  for area in areas
-   PjMax[OtherStorage,area] = 40
-  end
-  
-  areas = Select(Area,(from = "MB",to = "NL"))
-  for area in areas
-    PjMax[OtherStorage,area] = 15
-  end
-  
-  areas = Select(Area,(from = "PE",to = "NU"))
-  for area in areas
-    PjMax[OtherStorage,area] = 1
-  end
-  
-  #
-  areas = Select(Area,(from = "ON",to = "NL"))
-  Biomass = Select(Plant,"Biomass")
-  for area in areas
-    PjMax[Biomass,area] = 30
-  end
-  
-  areas = Select(Area,(from = "PE",to = "NU"))
-  for area in areas
-    PjMax[Biomass,area] = 1
-  end
-  
-  #
-  areas = Select(Area,(from = "ON",to = "MB"))
+  # Areas ON-MB
+  areas = Select(Area,(from="ON",to="MB"))
   for area in areas
     PjMax[SmallHydro,area] = 50
   end
   
-  areas = Select(Area,(from = "SK",to = "NU"))
+  # Areas SK-NU
+  areas = Select(Area,(from="SK",to="NU"))
   for area in areas
     PjMax[SmallHydro,area] = 10
   end
-  
-  #
+
+  # Base Hydro
+  BaseHydro = Select(Plant,"BaseHydro")
   areas = Select(Area,["AB","SK"])
   for area in areas
     PjMax[BaseHydro,area] = 200
   end
   
-  #
-  areas = Select(Area,(from = "ON",to = "BC"))
+  area = Select(Area,"QC")
+  PjMax[BaseHydro,area] = 100
+
+  # Battery
+  Battery = Select(Plant,"Battery")
+  
+  # Areas ON-AB
+  areas = Select(Area,(from="ON",to="AB"))
+  for area in areas
+    PjMax[Battery,area] = 40
+  end
+  
+  # Areas MB-NL
+  areas = Select(Area,(from="MB",to="NL"))
+  for area in areas
+    PjMax[Battery,area] = 15
+  end
+  
+  # Areas PE-NU
+  areas = Select(Area,(from="PE",to="NU"))
+  for area in areas
+    PjMax[Battery,area] = 1
+  end
+
+  # Biomass
+  Biomass = Select(Plant,"Biomass")
+  
+  # Areas ON-NL
+  areas = Select(Area,(from="ON",to="NL"))
+  for area in areas
+    PjMax[Biomass,area] = 30
+  end
+  
+  # Areas PE-NU
+  areas = Select(Area,(from="PE",to="NU"))
+  for area in areas
+    PjMax[Biomass,area] = 1
+  end
+
+  # Onshore Wind
+  OnshoreWind = Select(Plant,"OnshoreWind")
+  
+  # Areas ON-BC
+  areas = Select(Area,(from="ON",to="BC"))
   for area in areas
     PjMax[OnshoreWind,area] = 650
   end
   
-  PjMax[OnshoreWind,AB] = 350
-  PjMax[OnshoreWind,SK] = 150
+  area_limits = [
+    ("QC", 750),
+    ("AB", 350),
+    ("SK", 150),
+    ("NL", 70)
+  ]
+  for (area_name, limit) in area_limits
+    area = Select(Area,area_name)
+    PjMax[OnshoreWind,area] = limit
+  end
+  
   areas = Select(Area,["MB","NB","NS"])
   for area in areas
     PjMax[OnshoreWind,area] = 100
   end
   
-  PjMax[OnshoreWind,NL] = 70
-  areas = Select(Area,(from = "PE",to = "NU"))
+  # Areas PE-NU
+  areas = Select(Area,(from="PE",to="NU"))
   for area in areas
     PjMax[OnshoreWind,area] = 20
   end
+
+  # Solar PV
+  SolarPV = Select(Plant,"SolarPV")
   
-  #
-  areas = Select(Area,(from = "ON",to = "BC"))
+  # Areas ON-BC
+  areas = Select(Area,(from="ON",to="BC"))
   for area in areas
     PjMax[SolarPV,area] = 300
   end
   
-  PjMax[SolarPV,AB] = 150
-  areas = Select(Area,["MB","NB","NL","SK"])
+  area = Select(Area,"AB")
+  PjMax[SolarPV,area] = 150
+  
+  areas = Select(Area,["MB","NL","SK"])
   for area in areas
     PjMax[SolarPV,area] = 100
   end
   
-  area1 = Select(Area,(from = "PE",to = "NU"))
-  areas = union(area1,NS)
+  area1 = Select(Area,(from="PE",to="NU"))
+  areas = union(area1,Select(Area,["NB","NS"]))
   for area in areas
     PjMax[SolarPV,area] = 50
   end
-  
-  #
-  areas = Select(Area,(from = "ON",to = "NU"))
-  for area in areas
-    PjMax[Waste,area] = 0
-  end
 
+  # SMNR
+  SMNR = Select(Plant,"SMNR")
+  areas = Select(Area,(from="ON",to="NU"))
+  for area in areas
+    PjMax[SMNR,area] = 300
+  end
   WriteDisk(db,"EGInput/PjMax",PjMax)
 end
 

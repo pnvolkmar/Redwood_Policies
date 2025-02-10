@@ -23,7 +23,7 @@ Base.@kwdef struct EControl
   CalDB::String = "ECalDB"
   Input::String = "EInput"
   Outpt::String = "EOutput"
-  BCNameDB::String = ReadDisk(db,"E2020DB/BCNameDB") #  Base Case Name
+  BCNameDB::String = ReadDisk(db,"E2020DB/BCNameDB")#  Base Case Name
 
   Area::SetArray = ReadDisk(db,"E2020DB/AreaKey")
   AreaDS::SetArray = ReadDisk(db,"E2020DB/AreaDS")
@@ -39,7 +39,7 @@ end
 
 function ElecPolicy(db)
   data = EControl(; db)
-  (; Area,Years) = data
+  (; Area,Areas,Years) = data
   (; RnFr,RnGoalSwitch,RnOption) = data
 
   NS = Select(Area,"NS")
@@ -68,7 +68,7 @@ function ElecPolicy(db)
   RnFr[NS,Yr(2030)] = 0.80
   years = collect(Yr(2031):Final)
   for year in years
-    RnFr[NS,year] = RnFr[NS,Yr(2030)]
+    RnFr[NS,year] = RnFr[NS,Yr(2020)]
   end
   
   WriteDisk(db,"EGInput/RnFr",RnFr)
@@ -87,8 +87,8 @@ function ElecPolicy(db)
   # Renewable Capacity is built exogenously (RnOption=0)
   #  
   years = collect(Yr(2015):Final)
-  for year in years
-    RnOption[NS,year] = 0
+  for area in Areas, year in years
+    RnOption[area,year] = 0
   end
   
   WriteDisk(db,"EGInput/RnOption",RnOption)

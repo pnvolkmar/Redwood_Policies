@@ -26,7 +26,7 @@ Base.@kwdef struct IControl
   Input::String = "IInput"
   Outpt::String = "IOutput"
   CalDB::String = "ICalDB"
-  BCNameDB::String = ReadDisk(db,"E2020DB/BCNameDB") #  Base Case Name
+  BCNameDB::String = ReadDisk(db,"E2020DB/BCNameDB")#  Base Case Name
 
   Area::SetArray = ReadDisk(db,"E2020DB/AreaKey")
   AreaDS::SetArray = ReadDisk(db,"E2020DB/AreaDS")
@@ -141,7 +141,7 @@ function IndPolicy(db)
     if ec != []
       ec = ec[1]
       [xRM[fuelep,ec,NOX,AB,year] = xRM[fuelep,ec,NOX,AB,year] - 
-        Temp[ecc,NOX,AB,fuelep,year] for fuelep in fueleps, year in Yr(2022):Final]
+        Temp[ecc,NOX,AB,fuelep,year] for fuelep in fueleps, year in Future:Final]
     end
     
   end
@@ -155,7 +155,7 @@ function IndPolicy(db)
   TempProcess[Select(ECC,"UnconventionalGasProduction"), NOX,  AB,   Yr(2013):Final] = [0.009,  0.020,  0.030,  0.039,  0.049,  0.059,  0.068,  0.078,  0.087,  0.096,  0.106,  0.115,  0.125,  0.134,  0.144,  0.153,  0.162,  0.172,  0.181,  0.191,  0.199,  0.208,  0.217,  0.217,  0.217,  0.217,  0.217,  0.217,  0.217,  0.217,  0.217,  0.217,  0.217,  0.217,  0.217,  0.217,  0.217,  0.217]
   TempProcess[Select(ECC,"ConventionalGasProduction"),   NOX,  AB,   Yr(2013):Final] = [0.009,  0.020,  0.030,  0.039,  0.049,  0.059,  0.068,  0.078,  0.087,  0.096,  0.106,  0.115,  0.125,  0.134,  0.144,  0.153,  0.162,  0.172,  0.181,  0.191,  0.199,  0.208,  0.217,  0.217,  0.217,  0.217,  0.217,  0.217,  0.217,  0.217,  0.217,  0.217,  0.217,  0.217,  0.217,  0.217,  0.217,  0.217]
   
-  years = collect(Yr(2022):Final)
+  years = collect(Future:Final)
   for ecc in eccs, year in years
     xMERM[ecc,NOX,AB,year] = xMERM[ecc,NOX,AB,year] - TempProcess[ecc,NOX,AB,year]
   end
@@ -194,7 +194,7 @@ function IndPolicy(db)
     if ec != []
       ec = ec[1]
       [xRM[fuelep,ec,NOX,BC,year] = xRM[fuelep,ec,NOX,BC,year] - 
-        Temp[ecc,NOX,BC,fuelep,year] for fuelep in fueleps, year in Yr(2022):Final]
+        Temp[ecc,NOX,BC,fuelep,year] for fuelep in fueleps, year in Future:Final]
     end
     
   end
@@ -207,7 +207,7 @@ function IndPolicy(db)
   TempProcess[Select(ECC,"ConventionalGasProduction"),   NOX,  BC,   Yr(2013):Final] = [0.0089,  0.0178,  0.0267,  0.0357,  0.0447,  0.0537,  0.0627,  0.0718,  0.0809,  0.0899,  0.0990,  0.1081,  0.1172,  0.1264,  0.1355,  0.1446,  0.1537,  0.1628,  0.1718,  0.1809,  0.1894,  0.1981,  0.2062,  0.2062,  0.2062,  0.2062,  0.2062,  0.2062,  0.2062,  0.2062,  0.2062,  0.2062,  0.2062,  0.2062,  0.2062,  0.2062,  0.2062,  0.2062]
 
   [xMERM[ecc,NOX,BC,year] = xMERM[ecc,NOX,BC,year] - 
-    TempProcess[ecc,NOX,BC,year] for ecc in eccs, year in Yr(2022):Final]
+    TempProcess[ecc,NOX,BC,year] for ecc in eccs, year in Future:Final]
 
   ApplyToCogeneration(data,fueleps,NOX,Yr(2022):Final,eccs,BC)
 
@@ -258,7 +258,7 @@ function IndPolicy(db)
     if ec != []
       ec = ec[1]
       [xRM[fuelep,ec,NOX,BC,year] = xRM[fuelep,ec,NOX,BC,year] - 
-        Temp[ecc,NOX,BC,fuelep,year] for fuelep in fueleps, year in Yr(2022):Final]
+        Temp[ecc,NOX,BC,fuelep,year] for fuelep in fueleps, year in Future:Final]
     end
     
   end
@@ -270,7 +270,7 @@ function IndPolicy(db)
   TempProcess[Select(ECC,"UnconventionalGasProduction"), NOX,  BC,   Yr(2013):Final] = [-0.0037,  -0.0068,  -0.0092,  -0.0129,  -0.0147,  -0.0198,  -0.0208,  -0.0217,  -0.0223,  -0.0229,  -0.0236,  -0.0246,  -0.0254,  -0.0263,  -0.0273,  -0.0281,  -0.0295,  -0.0307,  -0.0320,  -0.0333,  -0.0341,  -0.0348,  -0.0357,  -0.0357,  -0.0357,  -0.0357,  -0.0357,  -0.0357,  -0.0357,  -0.0357,  -0.0357,  -0.0357,  -0.0357,  -0.0357,  -0.0357,  -0.0357,  -0.0357,  -0.0357]
   TempProcess[Select(ECC,"ConventionalGasProduction"),   NOX,  BC,   Yr(2013):Final] = [-0.0037,  -0.0068,  -0.0092,  -0.0129,  -0.0147,  -0.0198,  -0.0208,  -0.0217,  -0.0223,  -0.0229,  -0.0236,  -0.0246,  -0.0254,  -0.0263,  -0.0273,  -0.0281,  -0.0295,  -0.0307,  -0.0320,  -0.0333,  -0.0341,  -0.0348,  -0.0357,  -0.0357,  -0.0357,  -0.0357,  -0.0357,  -0.0357,  -0.0357,  -0.0357,  -0.0357,  -0.0357,  -0.0357,  -0.0357,  -0.0357,  -0.0357,  -0.0357,  -0.0357]
   
-  years = collect(Yr(2022):Final)
+  years = collect(Future:Final)
   for ecc in eccs, year in years
     xMERM[ecc,NOX,BC,year] = xMERM[ecc,NOX,BC,year] - TempProcess[ecc,NOX,BC,year]
   end

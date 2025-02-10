@@ -26,7 +26,7 @@ Base.@kwdef struct SControl
   CalDB::String = "SCalDB"
   Input::String = "SInput"
   Outpt::String = "SOutput"
-  BCNameDB::String = ReadDisk(db,"E2020DB/BCNameDB") #  Base Case Name
+  BCNameDB::String = ReadDisk(db,"E2020DB/BCNameDB")#  Base Case Name
 
   Area::SetArray = ReadDisk(db,"E2020DB/AreaKey")
   AreaDS::SetArray = ReadDisk(db,"E2020DB/AreaDS")
@@ -88,12 +88,12 @@ function SupplyPolicy(db)
   #
   # Hydrogen only in California
   #
-  dactechs = Select(DACTech,["LiquidNG","SolidNG"])
+  dactechs = Select(DACTech)
   for year in Years, dactech in dactechs
     DACMSM0[dactech,CA,year] = -10.0
   end
 
-  dactechs = Select(DACTech,["LiquidH2","SolidH2"])
+  dactechs = Select(DACTech,"KOHLoop")
   for year in Years, dactech in dactechs
     DACMSM0[dactech,CA,year] =   0.0
   end
