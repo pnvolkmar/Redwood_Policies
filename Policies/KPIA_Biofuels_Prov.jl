@@ -47,8 +47,7 @@ Base.@kwdef struct TControl
   ANMap::VariableArray{2} = ReadDisk(db,"E2020DB/ANMap") # [Area,Nation] Map between Area and Nation
   DmFrac::VariableArray{6} = ReadDisk(BCNameDB,"$Outpt/DmFrac") # [Enduse,Fuel,Tech,EC,Area,Year] Energy Demands Fuel/Tech Split (Btu/Btu)
   DmFracMin::VariableArray{6} = ReadDisk(db,"$Input/DmFracMin") # [Enduse,Fuel,Tech,EC,Area,Year] Demand Fuel/Tech Fraction Minimum (Btu/Btu)
-  xDmFrac::VariableArray{6} = ReadDisk(db,"$Input/xDmFrac") # [Enduse,Fuel,Tech,EC,Area,Year] Energy Demands Fuel/Tech Split (Btu/Btu)
-
+  
   # Scratch Variables
   BBlend::VariableArray{4} = zeros(Float64,length(Enduse),length(Tech),length(EC),length(Area)) # [Enduse,Tech,EC,Area] Biodiesel Blend %,not equal to DMFRAC
   BDGoal::VariableArray{1} = zeros(Float64,length(Year)) # [Year] Biodiesel Goal (Btu/Btu)
@@ -91,7 +90,7 @@ function HybridBlend(data,area,tech,ec,year)
   for enduse in Enduses
     GPoolDmFrac[enduse,tech,ec,area] = DmFrac[enduse,Gasoline,tech,ec,area,year]+
       DmFrac[enduse,Ethanol,tech,ec,area,year]
-    EBlend[enduse,tech,ec,area] = max(DmFrac[enduse,Ethanol,tech,ec,area,year]/
+    @finite_math EBlend[enduse,tech,ec,area] = max(DmFrac[enduse,Ethanol,tech,ec,area,year]/
       GPoolDmFrac[enduse,tech,ec,area],0)
     EBlend[enduse,tech,ec,area] = max(EBlend[enduse,tech,ec,area],ETGoal[year])
     DmFracMin[enduse,Electric,tech,ec,area,year] = 0.65
@@ -103,7 +102,7 @@ end
 function BiodieselBlend(data,area,tech,ec,year)
   (; Enduses,Fuel) = data
   (; BBlend,BDGoal,DmFrac,DmFracMin) = data
-  (; DPoolDmFrac,xDmFrac) = data   
+  (; DPoolDmFrac) = data   
 
   Diesel = Select(Fuel,"Diesel")
   Biodiesel = Select(Fuel,"Biodiesel")
@@ -197,8 +196,8 @@ end
 function TransPolicy(db)
   data = TControl(; db)
   (; Input) = data   
-  (; Area,EC,Enduse,Enduses,Fuel,Tech,Techs) = data
-  (; BDGoal,DmFracMin,ETGoal,xDmFrac) = data
+  (; Area,EC,Enduse,Enduses,Fuel,Tech) = data
+  (; BDGoal,DmFracMin,ETGoal) = data
   
   years = collect(Future:Final)
   
@@ -384,10 +383,7 @@ Base.@kwdef struct IControl
   ANMap::VariableArray{2} = ReadDisk(db,"E2020DB/ANMap") # [Area,Nation] Map between Area and Nation
   DmFrac::VariableArray{6} = ReadDisk(BCNameDB,"$Outpt/DmFrac") # [Enduse,Fuel,Tech,EC,Area,Year] Energy Demands Fuel/Tech Split (Btu/Btu)
   DmFracMin::VariableArray{6} = ReadDisk(db,"$Input/DmFracMin") # [Enduse,Fuel,Tech,EC,Area,Year] Demand Fuel/Tech Fraction Minimum (Btu/Btu)
-  
-  xDmFrac::VariableArray{6} = ReadDisk(db,"$Input/xDmFrac") # [Enduse,Fuel,Tech,EC,Area,Year] Energy Demands Fuel/Tech Split (Btu/Btu)
-
-  #
+   #
   # Scratch Variables
   #
   BBlend::VariableArray{5} = zeros(Float64,length(Enduse),length(Tech),length(EC),length(Area),length(Year)) # [Enduse,Tech,EC,Area,Year] Biodiesel Blend %,not equal to DMFRAC
@@ -398,62 +394,76 @@ Base.@kwdef struct IControl
   GPoolDmFrac::VariableArray{5} = zeros(Float64,length(Enduse),length(Tech),length(EC),length(Area),length(Year)) # [Enduse,Tech,EC,Area,Year] Gasoline Pool DmFrac,ie Ethanol + Gasoline
 end
 
-function IndustrialBiofuelBlend(data,area,years)
+function IndustrialBiofuelBlend(data,area,techs,years)
   (; EC,Enduse,Enduses) = data
   (; Fuel,Tech,Techs) = data
   (; BBlend,BDGoal,DmFrac,DmFracMin) = data
-  (; DPoolDmFrac,EBlend,ETGoal,GPoolDmFrac,xDmFrac) = data
+  (; DPoolDmFrac,EBlend,ETGoal,GPoolDmFrac) = data
 
   #
   # EthanolBlend
   #  
   ecs = Select(EC,(from = "Food",to = "OnFarmFuelUse"))
-  techs = Select(Tech,["Oil","OffRoad"])
+  enduses = Enduses
   Gasoline = Select(Fuel,"Gasoline")
   Ethanol = Select(Fuel,"Ethanol")
 
-  for year in years, ec in ecs, tech in techs, enduse in Enduses
+  for year in years, ec in ecs, tech in techs, enduse in enduses
     GPoolDmFrac[enduse,tech,ec,area,year] = 
-      DmFrac[enduse,Gasoline,tech,ec,area,year]+ 
-        DmFrac[enduse,Ethanol,tech,ec,area,year]
+    DmFrac[enduse,Gasoline,tech,ec,area,year]+ 
+      DmFrac[enduse,Ethanol,tech,ec,area,year]
 
     @finite_math EBlend[enduse,tech,ec,area,year] = 
       max(0,DmFrac[enduse,Ethanol,tech,ec,area,year]/
         GPoolDmFrac[enduse,tech,ec,area,year])
-  end
-      
-  for year in years, ec in ecs, tech in techs, enduse in Enduses
     EBlend[enduse,tech,ec,area,year] = max(EBlend[enduse,tech,ec,area,year],ETGoal[year])
-    xDmFrac[enduse,Ethanol,tech,ec,area,year] = EBlend[enduse,tech,ec,area,year]* 
+
+    DmFracMin[enduse,Ethanol,tech,ec,area,year] = EBlend[enduse,tech,ec,area,year]* 
       GPoolDmFrac[enduse,tech,ec,area,year]
-    xDmFrac[enduse,Gasoline,tech,ec,area,year] = (1-EBlend[enduse,tech,ec,area,year])* 
+    DmFracMin[enduse,Gasoline,tech,ec,area,year] = (1-EBlend[enduse,tech,ec,area,year])* 
       GPoolDmFrac[enduse,tech,ec,area,year]
-    DmFracMin[enduse,Ethanol,tech,ec,area,year] = xDmFrac[enduse,Ethanol,tech,ec,area,year]
- end
- 
+    
+    #
+    # Trap very small values - Ian 02/06/25
+    #
+    if DmFracMin[enduse,Ethanol,tech,ec,area,year] < 1e-50
+      DmFracMin[enduse,Ethanol,tech,ec,area,year] = 0
+    end
+    if DmFracMin[enduse,Gasoline,tech,ec,area,year] < 1e-50
+      DmFracMin[enduse,Gasoline,tech,ec,area,year] = 0
+    end
+  end
+
   #
   # BiodieselBlend
   #  
   Diesel = Select(Fuel,"Diesel")
   Biodiesel = Select(Fuel,"Biodiesel")
 
-  for year in years, ec in ecs, tech in Techs, enduse in Enduses
+  for year in years, ec in ecs, tech in techs, enduse in enduses
     DPoolDmFrac[enduse,tech,ec,area,year] = 
       DmFrac[enduse,Diesel,tech,ec,area,year]+ 
         DmFrac[enduse,Biodiesel,tech,ec,area,year]
-
+  
     @finite_math BBlend[enduse,tech,ec,area,year] = 
       max(0,DmFrac[enduse,Biodiesel,tech,ec,area,year]/
         DPoolDmFrac[enduse,tech,ec,area,year])
-  end
-
-  for year in years, ec in ecs, tech in Techs, enduse in Enduses
     BBlend[enduse,tech,ec,area,year] = max(BBlend[enduse,tech,ec,area,year],BDGoal[year])
-    xDmFrac[enduse,Biodiesel,tech,ec,area,year] = BBlend[enduse,tech,ec,area,year]* 
+
+    DmFracMin[enduse,Biodiesel,tech,ec,area,year] = BBlend[enduse,tech,ec,area,year]* 
       DPoolDmFrac[enduse,tech,ec,area,year]
-    xDmFrac[enduse,Diesel,tech,ec,area,year] = 
-      (1-BBlend[enduse,tech,ec,area,year])*DPoolDmFrac[enduse,tech,ec,area,year]
-    DmFracMin[enduse,Biodiesel,tech,ec,area,year] = xDmFrac[enduse,Biodiesel,tech,ec,area,year]
+    DmFracMin[enduse,Diesel,tech,ec,area,year] = (1-BBlend[enduse,tech,ec,area,year])* 
+      DPoolDmFrac[enduse,tech,ec,area,year]
+
+    #
+    # Trap very small values - Ian 02/06/25
+    #
+    if DmFracMin[enduse,Biodiesel,tech,ec,area,year] < 1e-50
+      DmFracMin[enduse,Biodiesel,tech,ec,area,year] = 0
+    end
+    if DmFracMin[enduse,Diesel,tech,ec,area,year] < 1e-50
+      DmFracMin[enduse,Diesel,tech,ec,area,year] = 0
+    end
   end
   
   return
@@ -462,10 +472,11 @@ end
 function IndPolicy(db)
   data = IControl(; db)
   (; Input) = data
-  (; Area) = data
+  (; Area,Tech) = data
   (; BDGoal,DmFracMin) = data
-  (; ETGoal,xDmFrac) = data
+  (; ETGoal) = data
 
+  techs = Select(Tech,["Oil","OffRoad"])
   #
   # Ethanol to energy multiplier = 0.684
   # Biodiesel to energy multiplier = 0.93
@@ -494,7 +505,7 @@ function IndPolicy(db)
   for year in years
     BDGoal[year] = 0.0372
   end
-  IndustrialBiofuelBlend(data,Select(Area,"ON"),years)
+  IndustrialBiofuelBlend(data,Select(Area,"ON"),techs,years)
 
   #
   years = collect(Future:Final)
@@ -502,7 +513,7 @@ function IndPolicy(db)
     ETGoal[year] = 0.0342
     BDGoal[year] = 0.0186
   end
-  IndustrialBiofuelBlend(data,Select(Area,"AB"),years)
+  IndustrialBiofuelBlend(data,Select(Area,"AB"),techs,years)
 
   #
   # Manitoba from 2008 to 2020 is 8.50% volume (5.89% energy).
@@ -514,7 +525,7 @@ function IndPolicy(db)
     ETGoal[year] = 0.0684
     BDGoal[year] = 0.0465
   end
-  IndustrialBiofuelBlend(data,Select(Area,"MB"),years)
+  IndustrialBiofuelBlend(data,Select(Area,"MB"),techs,years)
 
   #
   # Saskatchewan from 2006 onwards is 7.50% volume (5.18% energy), but
@@ -525,58 +536,84 @@ function IndPolicy(db)
     ETGoal[year] = 0.0518
     BDGoal[year] = 0.0186
   end
-  IndustrialBiofuelBlend(data,Select(Area,"SK"),years)
+  IndustrialBiofuelBlend(data,Select(Area,"SK"),techs,years)
 
   #
   # Quebec from 2012 onwards is 5.00% volume (3.42% energy)
   # new regs in 2021, 10% in 2023, 12% in 2025, 14% in 2028, 15% in 2030
   #  
-  years = collect(Future:Yr(2022))
-  for year in years
-    ETGoal[year] = 0.0342
-  end
-  
-  years = collect(Yr(2023):Yr(2024))
+  QC = Select(Area,"QC")
+
+  years = collect(Future:Yr(2024))
   for year in years
     ETGoal[year] = 0.0684
-    BDGoal[year] = 0.0279
   end
   
   years = collect(Yr(2025):Yr(2027))
   for year in years
     ETGoal[year] = 0.08208
   end  
+  years = collect(Yr(2028):Yr(2029))
+  for year in years
+    ETGoal[year] = 0.09576
+  end  
+  years = collect(Yr(2030):Final)
+  for year in years
+    ETGoal[year] = 0.1026
+  end  
   
+  years = collect(Future:Yr(2024))
+  for year in years
+    BDGoal[year] = 0.0279
+  end
   years = collect(Yr(2025):Yr(2029))
   for year in years
     BDGoal[year] = 0.0465
   end
-   
-  years = collect(Yr(2028):Yr(2029))
-  for year in years
-    ETGoal[year] = 0.09576
-  end
   
   years = collect(Yr(2030):Final)
   for year in years
-    ETGoal[year] = 0.1026
     BDGoal[year] = 0.093
   end
-  
   years = collect(Future:Final)
-  IndustrialBiofuelBlend(data,Select(Area,"QC"),years)
+
+  IndustrialBiofuelBlend(data,Select(Area,"QC"),techs,years)
 
   #
-  # BC Ethanol from 2010 onwards is 5.00% volume (3.42% energy)
+  # BC ethanol from 2010 onwards is 5.00% volume (3.42% energy)
   #  
   years = collect(Future:Final)
   for year in years
     ETGoal[year] = 0.0342
     BDGoal[year] = 0.0372
   end
-  IndustrialBiofuelBlend(data,Select(Area,"BC"),years)
+  IndustrialBiofuelBlend(data,Select(Area,"BC"),techs,years)
 
-  WriteDisk(db,"$Input/xDmFrac",xDmFrac)
+  areas = Select(Area,["NB","NS","PE","NL"])
+  years = collect(Future:Yr(2024))
+  for year in years
+    ETGoal[year] = 0.01
+    BDGoal[year] = 0.01
+  end
+
+  years = collect(Yr(2025):Yr(2026))
+  for year in years
+    ETGoal[year] = 0.03
+    BDGoal[year] = 0.05
+  end
+  years = collect(Yr(2027):Final)
+  for year in years
+    ETGoal[year] = 0.05
+    BDGoal[year] = 0.09
+  end
+
+  #
+  # TODO
+  # There should be a year selection from Future to Final here, but it 
+  # was not in Promula version, so I left it out. 02/05/25 R.Levesque
+  #
+  IndustrialBiofuelBlend(data,Select(Area,"BC"),techs,years)
+
   WriteDisk(db,"$Input/DmFracMin",DmFracMin)
 end
 
@@ -613,8 +650,6 @@ Base.@kwdef struct RControl
   ANMap::VariableArray{2} = ReadDisk(db,"E2020DB/ANMap") # [Area,Nation] Map between Area and Nation
   DmFrac::VariableArray{6} = ReadDisk(BCNameDB,"$Outpt/DmFrac") # [Enduse,Fuel,Tech,EC,Area,Year] Energy Demands Fuel/Tech Split (Btu/Btu)
   DmFracMin::VariableArray{6} = ReadDisk(db,"$Input/DmFracMin") # [Enduse,Fuel,Tech,EC,Area,Year] Demand Fuel/Tech Fraction Minimum (Btu/Btu)
-  # DmFrac::VariableArray{6} = ReadDisk(db,"$Outpt/DmFrac") # [Enduse,Fuel,Tech,EC,Area,Year] Energy Demands Fuel/Tech Split (Btu/Btu)
-  xDmFrac::VariableArray{6} = ReadDisk(db,"$Input/xDmFrac") # [Enduse,Fuel,Tech,EC,Area,Year] Energy Demands Fuel/Tech Split (Btu/Btu)
 
   # Scratch Variables
   BBlend::VariableArray{5} = zeros(Float64,length(Enduse),length(Tech),length(EC),length(Area),length(Year)) # [Enduse,Tech,EC,Area,Year] Biodiesel Blend %,not equal to DMFRAC
@@ -625,63 +660,76 @@ Base.@kwdef struct RControl
   GPoolDmFrac::VariableArray{5} = zeros(Float64,length(Enduse),length(Tech),length(EC),length(Area),length(Year)) # [Enduse,Tech,EC,Area,Year] Gasoline Pool DmFrac,ie Ethanol + Gasoline
 end
 
-function ResBiofuelBlend(data,area,years)
-  (; EC,Enduse) = data
-  (; Fuel,Techs) = data
+function ResBiofuelBlend(data,area,techs,years)
+  (; EC,Enduses) = data
+  (; Fuel) = data
   (; BBlend,BDGoal,DmFrac,DmFracMin) = data
-  (; DPoolDmFrac,EBlend,ETGoal,GPoolDmFrac,xDmFrac) = data
+  (; DPoolDmFrac,EBlend,ETGoal,GPoolDmFrac) = data
 
   #
   # EthanolBlend
   #  
   ecs = Select(EC,(from = "SingleFamilyDetached",to = "OtherResidential"))
-  enduses = Select(Enduse,["Heat","HW"])
+  enduses = Enduses
   Gasoline = Select(Fuel,"Gasoline")
   Ethanol = Select(Fuel,"Ethanol")
-  
-  for year in years, ec in ecs, tech in Techs, enduse in enduses
+
+  for year in years, ec in ecs, tech in techs, enduse in enduses
     GPoolDmFrac[enduse,tech,ec,area,year] = 
-      DmFrac[enduse,Gasoline,tech,ec,area,year] + 
-        DmFrac[enduse,Ethanol,tech,ec,area,year]
-        
+    DmFrac[enduse,Gasoline,tech,ec,area,year]+ 
+      DmFrac[enduse,Ethanol,tech,ec,area,year]
+
     @finite_math EBlend[enduse,tech,ec,area,year] = 
       max(0,DmFrac[enduse,Ethanol,tech,ec,area,year]/
         GPoolDmFrac[enduse,tech,ec,area,year])
-  end
-  
-  for year in years, ec in ecs, tech in Techs, enduse in enduses
     EBlend[enduse,tech,ec,area,year] = max(EBlend[enduse,tech,ec,area,year],ETGoal[year])
-    xDmFrac[enduse,Ethanol,tech,ec,area,year] = 
-      EBlend[enduse,tech,ec,area,year]*GPoolDmFrac[enduse,tech,ec,area,year]
-    xDmFrac[enduse,Gasoline,tech,ec,area,year] = (1-EBlend[enduse,tech,ec,area,year])* 
+
+    DmFracMin[enduse,Ethanol,tech,ec,area,year] = EBlend[enduse,tech,ec,area,year]* 
       GPoolDmFrac[enduse,tech,ec,area,year]
-    DmFracMin[enduse,Ethanol,tech,ec,area,year] = xDmFrac[enduse,Ethanol,tech,ec,area,year]
+    DmFracMin[enduse,Gasoline,tech,ec,area,year] = (1-EBlend[enduse,tech,ec,area,year])* 
+      GPoolDmFrac[enduse,tech,ec,area,year]
+    
+    #
+    # Trap very small values - Ian 02/06/25
+    #
+    if DmFracMin[enduse,Ethanol,tech,ec,area,year] < 1e-50
+      DmFracMin[enduse,Ethanol,tech,ec,area,year] = 0
+    end
+    if DmFracMin[enduse,Gasoline,tech,ec,area,year] < 1e-50
+      DmFracMin[enduse,Gasoline,tech,ec,area,year] = 0
+    end
   end
-  
+
   #
   # BiodieselBlend
   #  
   Diesel = Select(Fuel,"Diesel")
   Biodiesel = Select(Fuel,"Biodiesel")
 
-  for year in years, ec in ecs, tech in Techs, enduse in enduses
+  for year in years, ec in ecs, tech in techs, enduse in enduses
     DPoolDmFrac[enduse,tech,ec,area,year] = 
       DmFrac[enduse,Diesel,tech,ec,area,year]+ 
         DmFrac[enduse,Biodiesel,tech,ec,area,year]
-
-    @finite_math BBlend[enduse,tech,ec,area,year] = 
-       max(0,DmFrac[enduse,Biodiesel,tech,ec,area,year]/
-        DPoolDmFrac[enduse,tech,ec,area,year])
-  end
   
-  for year in years, ec in ecs, tech in Techs, enduse in enduses
+    @finite_math BBlend[enduse,tech,ec,area,year] = 
+      max(0,DmFrac[enduse,Biodiesel,tech,ec,area,year]/
+        DPoolDmFrac[enduse,tech,ec,area,year])
     BBlend[enduse,tech,ec,area,year] = max(BBlend[enduse,tech,ec,area,year],BDGoal[year])
-    xDmFrac[enduse,Biodiesel,tech,ec,area,year] = 
-      BBlend[enduse,tech,ec,area,year]*DPoolDmFrac[enduse,tech,ec,area,year]
-    xDmFrac[enduse,Diesel,tech,ec,area,year] = 
-      (1-BBlend[enduse,tech,ec,area,year])*DPoolDmFrac[enduse,tech,ec,area,year]
-    DmFracMin[enduse,Biodiesel,tech,ec,area,year] = 
-      xDmFrac[enduse,Biodiesel,tech,ec,area,year]
+
+    DmFracMin[enduse,Biodiesel,tech,ec,area,year] = BBlend[enduse,tech,ec,area,year]* 
+      DPoolDmFrac[enduse,tech,ec,area,year]
+    DmFracMin[enduse,Diesel,tech,ec,area,year] = (1-BBlend[enduse,tech,ec,area,year])* 
+      DPoolDmFrac[enduse,tech,ec,area,year]
+    
+    #
+    # Trap very small values - Ian 02/06/25
+    #
+    if DmFracMin[enduse,Biodiesel,tech,ec,area,year] < 1e-50
+      DmFracMin[enduse,Biodiesel,tech,ec,area,year] = 0
+    end
+    if DmFracMin[enduse,Diesel,tech,ec,area,year] < 1e-50
+      DmFracMin[enduse,Diesel,tech,ec,area,year] = 0
+    end
   end
   
   return
@@ -690,9 +738,10 @@ end
 function ResPolicy(db)
   data = RControl(; db)
   (; Input) = data
-  (; Area) = data
-  (; BDGoal,DmFracMin,ETGoal,xDmFrac) = data
-
+  (; Area,Tech) = data
+  (; BDGoal,DmFracMin,ETGoal) = data
+  
+  tech = Select(Tech,"Oil")
   #
   # Ethanol to energy multiplier = 0.684
   # Biodiesel to energy multiplier = 0.93
@@ -721,14 +770,14 @@ function ResPolicy(db)
   for year in years
     BDGoal[year] = 0.0372
   end
-  ResBiofuelBlend(data,Select(Area,"ON"),years)
+  ResBiofuelBlend(data,Select(Area,"ON"),tech,years)
 
   years = collect(Future:Final)
   for year in years
     ETGoal[year] = 0.0342
     BDGoal[year] = 0.0186
   end
-  ResBiofuelBlend(data,Select(Area,"AB"),years)
+  ResBiofuelBlend(data,Select(Area,"AB"),tech,years)
 
   #
   # Manitoba from 2008 to 2020 is 8.50% volume (5.89% energy).
@@ -745,7 +794,7 @@ function ResPolicy(db)
   end
   
   years = collect(Future:Final)
-  ResBiofuelBlend(data,Select(Area,"MB"),years)
+  ResBiofuelBlend(data,Select(Area,"MB"),tech,years)
 
   #
   # Saskatchewan from 2006 onwards is 7.50% volume (5.18% energy), but
@@ -756,7 +805,7 @@ function ResPolicy(db)
     ETGoal[year] = 0.0518
     BDGoal[year] = 0.0186
   end
-  ResBiofuelBlend(data,Select(Area,"SK"),years)
+  ResBiofuelBlend(data,Select(Area,"SK"),tech,years)
 
   #
   # Quebec from 2012 onwards is 5.00% volume (3.42% energy)
@@ -794,7 +843,7 @@ function ResPolicy(db)
    BDGoal[year] = 0.0465
   end
   years = collect(Future:Final)
-  ResBiofuelBlend(data,Select(Area,"QC"),years)
+  ResBiofuelBlend(data,Select(Area,"QC"),tech,years)
 
   #
   # BC Ethanol from 2010 onwards is 5.00% volume (3.42% energy)
@@ -804,9 +853,8 @@ function ResPolicy(db)
     ETGoal[year] = 0.0342
     BDGoal[year] = 0.0372
   end
-  ResBiofuelBlend(data,Select(Area,"BC"),years)
+  ResBiofuelBlend(data,Select(Area,"BC"),tech,years)
 
-  WriteDisk(db,"$Input/xDmFrac",xDmFrac)
   WriteDisk(db,"$Input/DmFracMin",DmFracMin)
 end
 
@@ -843,8 +891,6 @@ Base.@kwdef struct CControl
   ANMap::VariableArray{2} = ReadDisk(db,"E2020DB/ANMap") # [Area,Nation] Map between Area and Nation
   DmFrac::VariableArray{6} = ReadDisk(BCNameDB,"$Outpt/DmFrac") # [Enduse,Fuel,Tech,EC,Area,Year] Energy Demands Fuel/Tech Split (Btu/Btu)
   DmFracMin::VariableArray{6} = ReadDisk(db,"$Input/DmFracMin") # [Enduse,Fuel,Tech,EC,Area,Year] Demand Fuel/Tech Fraction Minimum (Btu/Btu)
- # DmFrac::VariableArray{6} = ReadDisk(db,"$Outpt/DmFrac") # [Enduse,Fuel,Tech,EC,Area,Year] Energy Demands Fuel/Tech Split (Btu/Btu)
-  xDmFrac::VariableArray{6} = ReadDisk(db,"$Input/xDmFrac") # [Enduse,Fuel,Tech,EC,Area,Year] Energy Demands Fuel/Tech Split (Btu/Btu)
 
   #
   # Scratch Variables
@@ -857,21 +903,20 @@ Base.@kwdef struct CControl
   GPoolDmFrac::VariableArray{5} = zeros(Float64,length(Enduse),length(Tech),length(EC),length(Area),length(Year)) # [Enduse,Tech,EC,Area,Year] Gasoline Pool DmFrac,ie Ethanol + Gasoline
 end
 
-function ComBiofuelBlend(data,area,years)
-  (; EC,Enduse) = data
-  (; Fuel,Tech,Techs) = data
+function ComBiofuelBlend(data,area,techs,years)
+  (; EC,Enduses) = data
+  (; Fuel) = data
   (; BBlend,BDGoal,DmFrac,DmFracMin) = data
-  (; DPoolDmFrac,EBlend,ETGoal,GPoolDmFrac,xDmFrac) = data
+  (; DPoolDmFrac,EBlend,ETGoal,GPoolDmFrac) = data
 
   #
   # EthanolBlend
   #  
   ecs = Select(EC,(from = "Wholesale",to = "NGPipeline"))
-  enduses = Select(Enduse,["Heat","HW"])
   Gasoline = Select(Fuel,"Gasoline")
   Ethanol = Select(Fuel,"Ethanol")
 
-  for year in years, ec in ecs, tech in Techs, enduse in enduses
+  for year in years, ec in ecs, tech in techs, enduse in Enduses
     GPoolDmFrac[enduse,tech,ec,area,year] = 
     DmFrac[enduse,Gasoline,tech,ec,area,year]+ 
       DmFrac[enduse,Ethanol,tech,ec,area,year]
@@ -879,15 +924,22 @@ function ComBiofuelBlend(data,area,years)
     @finite_math EBlend[enduse,tech,ec,area,year] = 
       max(0,DmFrac[enduse,Ethanol,tech,ec,area,year]/
         GPoolDmFrac[enduse,tech,ec,area,year])
-  end
-      
-  for year in years, ec in ecs, tech in Techs, enduse in enduses
     EBlend[enduse,tech,ec,area,year] = max(EBlend[enduse,tech,ec,area,year],ETGoal[year])
-    xDmFrac[enduse,Ethanol,tech,ec,area,year] = EBlend[enduse,tech,ec,area,year]* 
+
+    DmFracMin[enduse,Ethanol,tech,ec,area,year] = EBlend[enduse,tech,ec,area,year]* 
       GPoolDmFrac[enduse,tech,ec,area,year]
-    xDmFrac[enduse,Gasoline,tech,ec,area,year] = (1-EBlend[enduse,tech,ec,area,year])* 
+    DmFracMin[enduse,Gasoline,tech,ec,area,year] = (1-EBlend[enduse,tech,ec,area,year])* 
       GPoolDmFrac[enduse,tech,ec,area,year]
-    DmFracMin[enduse,Ethanol,tech,ec,area,year] = xDmFrac[enduse,Ethanol,tech,ec,area,year]
+
+    #
+    # Trap very small values - Ian 02/06/25
+    #
+    if DmFracMin[enduse,Ethanol,tech,ec,area,year] < 1e-50
+      DmFracMin[enduse,Ethanol,tech,ec,area,year] = 0
+    end
+    if DmFracMin[enduse,Gasoline,tech,ec,area,year] < 1e-50
+      DmFracMin[enduse,Gasoline,tech,ec,area,year] = 0
+    end
   end
 
   #
@@ -896,7 +948,7 @@ function ComBiofuelBlend(data,area,years)
   Diesel = Select(Fuel,"Diesel")
   Biodiesel = Select(Fuel,"Biodiesel")
 
-  for year in years, ec in ecs, tech in Techs, enduse in enduses
+  for year in years, ec in ecs, tech in techs, enduse in Enduses
     DPoolDmFrac[enduse,tech,ec,area,year] = 
       DmFrac[enduse,Diesel,tech,ec,area,year]+ 
         DmFrac[enduse,Biodiesel,tech,ec,area,year]
@@ -904,16 +956,22 @@ function ComBiofuelBlend(data,area,years)
     @finite_math BBlend[enduse,tech,ec,area,year] = 
       max(0,DmFrac[enduse,Biodiesel,tech,ec,area,year]/
         DPoolDmFrac[enduse,tech,ec,area,year])
-  end
-        
-  for year in years, ec in ecs, tech in Techs, enduse in enduses
     BBlend[enduse,tech,ec,area,year] = max(BBlend[enduse,tech,ec,area,year],BDGoal[year])
-    xDmFrac[enduse,Biodiesel,tech,ec,area,year] = BBlend[enduse,tech,ec,area,year]* 
+
+    DmFracMin[enduse,Biodiesel,tech,ec,area,year] = BBlend[enduse,tech,ec,area,year]* 
       DPoolDmFrac[enduse,tech,ec,area,year]
-    xDmFrac[enduse,Diesel,tech,ec,area,year] = (1-BBlend[enduse,tech,ec,area,year])* 
+    DmFracMin[enduse,Diesel,tech,ec,area,year] = (1-BBlend[enduse,tech,ec,area,year])* 
       DPoolDmFrac[enduse,tech,ec,area,year]
-    DmFracMin[enduse,Biodiesel,tech,ec,area,year] = 
-      xDmFrac[enduse,Biodiesel,tech,ec,area,year]
+
+    #
+    # Trap very small values - Ian 02/06/25
+    #
+    if DmFracMin[enduse,Biodiesel,tech,ec,area,year] < 1e-50
+      DmFracMin[enduse,Biodiesel,tech,ec,area,year] = 0
+    end
+    if DmFracMin[enduse,Diesel,tech,ec,area,year] < 1e-50
+      DmFracMin[enduse,Diesel,tech,ec,area,year] = 0
+    end
   end
   
   return
@@ -922,9 +980,10 @@ end
 function ComPolicy(db)
   data = CControl(; db)
   (; Input) = data
-  (; Area) = data
-  (; BDGoal,DmFracMin,ETGoal,xDmFrac) = data
+  (; Area,Tech) = data
+  (; BDGoal,DmFracMin,ETGoal) = data
 
+  tech = Select(Tech,"Oil")
   #
   # Ethanol to energy multiplier = 0.684
   # Biodiesel to energy multiplier = 0.93
@@ -953,7 +1012,7 @@ function ComPolicy(db)
   for year in years
     BDGoal[year] = 0.0372
   end
-  ComBiofuelBlend(data,Select(Area,"ON"),years)
+  ComBiofuelBlend(data,Select(Area,"ON"),tech,years)
 
   #
   years = collect(Future:Final)
@@ -961,7 +1020,7 @@ function ComPolicy(db)
     ETGoal[year] = 0.0342
     BDGoal[year] = 0.0186
   end
-  ComBiofuelBlend(data,Select(Area,"AB"),years)
+  ComBiofuelBlend(data,Select(Area,"AB"),tech,years)
 
   #
   # Manitoba from 2008 to 2020 is 8.50% volume (5.89% energy).
@@ -973,7 +1032,7 @@ function ComPolicy(db)
     ETGoal[year] = 0.0684
     BDGoal[year] = 0.0465
   end
-  ComBiofuelBlend(data,Select(Area,"MB"),years)
+  ComBiofuelBlend(data,Select(Area,"MB"),tech,years)
 
   #
   # Saskatchewan from 2006 onwards is 7.50% volume (5.18% energy), but
@@ -984,7 +1043,7 @@ function ComPolicy(db)
     ETGoal[year] = 0.0518
     BDGoal[year] = 0.0186
   end
-  ComBiofuelBlend(data,Select(Area,"SK"),years)
+  ComBiofuelBlend(data,Select(Area,"SK"),tech,years)
 
   #
   # Quebec from 2012 onwards is 5.00% volume (3.42% energy)
@@ -1026,7 +1085,7 @@ function ComPolicy(db)
   end
   
   years = collect(Future:Final)
-  ComBiofuelBlend(data,Select(Area,"QC"),years)
+  ComBiofuelBlend(data,Select(Area,"QC"),tech,years)
 
   #
   # BC ethanol from 2010 onwards is 5.00% volume (3.42% energy)
@@ -1034,15 +1093,11 @@ function ComPolicy(db)
   years = collect(Future:Final)
   for year in years
     ETGoal[year] = 0.0342
-  end
-  
-  for year in years
     BDGoal[year] = 0.0372
   end
   
-  ComBiofuelBlend(data,Select(Area,"BC"),years)
+  ComBiofuelBlend(data,Select(Area,"BC"),tech,years)
 
-  WriteDisk(db,"$Input/xDmFrac",xDmFrac)
   WriteDisk(db,"$Input/DmFracMin",DmFracMin)
 end
 

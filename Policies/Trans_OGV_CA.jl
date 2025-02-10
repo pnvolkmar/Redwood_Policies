@@ -68,11 +68,11 @@ function TransPolicy(db)
   #
   # Foreign Freight
   #
-  ec = Select(EC,"ForeignFreight")
+  ecs = Select(EC,"ForeignFreight")
   techs = Select(Tech,(from = "MarineHeavy",to = "MarineLight"))
   years = collect(Yr(2045):Final)
   fuel = Select(Fuel,"Hydrogen")
-  for year in years, tech in techs
+  for year in years, ec in ecs, tech in techs
     DmFracMin[1,fuel,tech,ec,CA,year] = 0.25
   end
   
@@ -80,7 +80,7 @@ function TransPolicy(db)
   # Add some Electric demand (5%?) to simulate shore power reg
   # 
   fuel = Select(Fuel,"Electric")
-  for year in years, tech in techs
+  for year in years, ec in ecs, tech in techs
     DmFracMin[1,fuel,tech,ec,CA,year] = 0.05
   end
 
@@ -89,7 +89,7 @@ function TransPolicy(db)
   #  
   fuels = Select(Fuel,["Hydrogen","Electric"])
   years = collect(Yr(2022):Yr(2044))
-  for year in years, tech in techs, fuel in fuels
+  for year in years, ec in ecs, tech in techs, fuel in fuels
     DmFracMin[1,fuel,tech,ec,CA,year] = DmFracMin[1,fuel,tech,ec,CA,year-1]+
     (DmFracMin[1,fuel,tech,ec,CA,Yr(2045)]-DmFracMin[1,fuel,tech,ec,CA,Yr(2021)])/
       (2045-2021)
@@ -100,12 +100,11 @@ function TransPolicy(db)
   #
   # years = collect(Yr(2022):Final)
   years = collect(Yr(2022):Yr(2044))
-  for year in years, tech in techs, fuel in fuels
+  for year in years, ec in ecs, tech in techs, fuel in fuels
     xDmFrac[1,fuel,tech,ec,CA,year] = DmFracMin[1,fuel,tech,ec,CA,year]
   end
 
   WriteDisk(db,"$Input/DmFracMin",DmFracMin);
-  WriteDisk(db,"$Input/xDmFrac",xDmFrac);
 end
 
 function PolicyControl(db)

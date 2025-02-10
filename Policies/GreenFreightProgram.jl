@@ -20,6 +20,7 @@ Base.@kwdef struct TControl
   CalDB::String = "TCalDB"
   Input::String = "TInput"
   Outpt::String = "TOutput"
+  BCNameDB::String = ReadDisk(db,"E2020DB/BCNameDB") #  Base Case Name
   RefNameDB::String = ReadDisk(db,"E2020DB/RefNameDB") #  Reference Case Name
 
   Area::SetArray = ReadDisk(db,"E2020DB/AreaKey")
@@ -42,12 +43,12 @@ Base.@kwdef struct TControl
   Years::Vector{Int} = collect(Select(Year))
 
   ANMap::VariableArray{2} = ReadDisk(db,"E2020DB/ANMap") # [Area,Nation] Map between Area and Nation
-  DER::VariableArray{4} = ReadDisk(RefNameDB,"$Outpt/DER",Future) # [Enduse,Tech,EC,Area,Future] Device Energy Requirement (mmBtu/Yr)
+  DER::VariableArray{4} = ReadDisk(BCNameDB,"$Outpt/DER",Future) # [Enduse,Tech,EC,Area,Future] Device Energy Requirement (mmBtu/Yr)
   DERReduction::VariableArray{5} = ReadDisk(db,"$Input/DERReduction") # [Enduse,Tech,EC,Area,Year] Fraction of Device Energy Removed after this Policy is added ((mmBtu/Yr)/(mmBtu/Yr))
   DERReductionStart::VariableArray{4} = ReadDisk(db,"$Input/DERReduction",Zero) # [Enduse,Tech,EC,Area,Year] Fraction of Device Energy Removed from Previous Policies ((mmBtu/Yr)/(mmBtu/Yr))
   DERRRExo::VariableArray{5} = ReadDisk(db,"$Outpt/DERRRExo") # [Enduse,Tech,EC,Area,Year] Device Energy Exogenous Retrofits ((mmBtu/Yr)/Yr)
   DInvExo::VariableArray{5} = ReadDisk(db,"$Input/DInvExo") # [Enduse,Tech,EC,Area,Year] Device Exogenous Investments (M$/Yr)
-  Dmd::VariableArray{4} = ReadDisk(RefNameDB,"$Outpt/Dmd",Future) # [Enduse,Tech,EC,Area,Future] Demand (TBtu/Yr)
+  Dmd::VariableArray{4} = ReadDisk(BCNameDB,"$Outpt/Dmd",Future) # [Enduse,Tech,EC,Area,Future] Demand (TBtu/Yr)
   xInflation::VariableArray{2} = ReadDisk(db,"MInput/xInflation") # [Area,Year] Inflation Index ($/$)
 
   # Scratch Variables
@@ -114,6 +115,8 @@ function AllocateReduction(data,DmdTotal,year,enduse,tech,ec,areas)
   for area in areas
     DERReduction[enduse,tech,ec,area,year] = DmdSavingsTotal[year]/DmdTotal
   end
+
+  return
   
 end
 
@@ -159,12 +162,12 @@ function TransPolicy(db)
   
   years = collect(Yr(2023):Yr(2027))
   for year in years
-    Adjustment[year] = Adjustment[year-1] + 0.02
+    Adjustment[year] = Adjustment[year-1]+0.02
   end
   
   years = collect(Yr(2028):Yr(2032))
   for year in years
-    Adjustment[year] = Adjustment[year-1] + 0.04
+    Adjustment[year] = Adjustment[year-1]+0.04
   end
 
   years = collect(Yr(2022):Yr(2032))
@@ -172,13 +175,10 @@ function TransPolicy(db)
     ReductionAdditional[year] = ReductionAdditional[year]*Adjustment[year]
   end
 
-  #
-  # Total Demands Reference Case Values
-  #  
   DmdTotal = sum(Dmd[Carriage,HDV8Diesel,Freight,area] for area in areas)
 
-  for year in years, area in areas
-    AllocateReduction(data,DmdTotal,year,Carriage,HDV8Diesel,Freight,area)
+  for year in years
+    AllocateReduction(data,DmdTotal,year,Carriage,HDV8Diesel,Freight,areas)
   end
   
   #
@@ -202,6 +202,7 @@ function TransPolicy(db)
   #
   # Program Costs
   #  
+  years = collect(Yr(2022):Yr(2032))
   Expenses[years] =[
   # / 2022  2023  2024  2025  2026  2027  2028  2029  2030  2031  2032
     0.0   50    50    50    50    0     0     0    0      0     0
@@ -213,8 +214,8 @@ function TransPolicy(db)
   #
   # Allocate Program Costs to each Enduse,Tech,EC,and Area
   # 
-  for year in years, area in areas 
-    DERRemovedTotal[year] = sum(DERRRExo[Carriage,HDV8Diesel,Freight,area,year])
+  for year in years
+    DERRemovedTotal[year] = sum(DERRRExo[Carriage,HDV8Diesel,Freight,area,year] for area in areas)
   end
 
   for area in areas, year in years

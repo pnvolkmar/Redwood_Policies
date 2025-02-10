@@ -51,7 +51,7 @@ Base.@kwdef struct EControl
   xUnGCCR::VariableArray{2} = ReadDisk(db,"EGInput/xUnGCCR") # [Unit,Year] Exogenous Generating Capacity Completion Rate (MW)
 
   # Scratch Variables
-  # LocAdds     'Local Variable for Capacity Additions (MW)'
+  # CapAdd     'Local Variable for Capacity Additions (MW)'
   # LocYear     'Local Variable for Year of Addition (Year)'
   # UCode    'Scratch Variable for UnCode',Type = String(20)
 end
@@ -68,7 +68,7 @@ function GetUnitSets(data,unit)
   return plant,node,genco,area
 end
 
-function AddCapacity(data,UCode,LocYear,LocAdds)
+function AddCapacity(data,UCode,LocYear,CapAdd)
   (; Year) = data
   (; CD,UnCode,UnOnLine,xUnGCCI,xUnGCCR) = data
 
@@ -87,10 +87,10 @@ function AddCapacity(data,UCode,LocYear,LocAdds)
   #
   # If the plant comes on later in the forecast, then simulate construction
   #  
-  if LocYear - CD[plant,Zero] > (HisTime+1)
-    Loc1 = LocYear - CD[plant,Zero] - ITime+1
+  if LocYear-CD[plant,Zero] > (HisTime+1)
+    Loc1 = LocYear-CD[plant,Zero]-ITime+1
     year = Int(Loc1)
-    xUnGCCI[unit,year] = xUnGCCI[unit,year] + LocAdds/1000
+    xUnGCCI[unit,year] = xUnGCCI[unit,year]+CapAdd/1000
 
   #
   # If the plant comes on-line in the first few years, then there is no time
@@ -98,7 +98,7 @@ function AddCapacity(data,UCode,LocYear,LocAdds)
   #  
   else
     year = Select(Year,string(LocYear))
-    xUnGCCR[unit,year] = xUnGCCR[unit,year] + LocAdds/1000
+    xUnGCCR[unit,year] = xUnGCCR[unit,year] + CapAdd/1000
   end
   return
 end
@@ -108,10 +108,26 @@ function ElecPolicy(db)
   data = EControl(; db)
   (; UnOnLine,xUnGCCI,xUnGCCR) = data
 
-  #                 Prov_Gentype (UnCode)     Year    xUnGCCI (kW)
-  AddCapacity(data,"AB_New_Geo",            2024,    5000)
-  AddCapacity(data,"BC_New_Geo",            2025,    7000)
-  AddCapacity(data,"NS_New_Wave",           2025,    9000)
+  #
+  # Edited by Thomas: (update Ref23)
+  #                   I delayed AB_New_Geo from 2022 to 2024 base on "Major Projects Alberta".
+  #                   I have postponed BC_New_Geo from 2023 to 2025 and increased the capacity from 5 to 7 MW
+  #                                                                     reference: http://fnmpc.ca/clarke_lake)
+  #                   I have added NS_New_Wave corresponding to the Meteghan project by Fundry Ocean Research Centre for Energy
+  # Edited by Thomas:
+  #                   (consultation Ref24)
+  #					1.	Suffield Solar, Bifacial solar power generating facility, Alberta, 23 MWac, commissioned in 2021
+  #					2.	DEEP Earth Energy, geothermal power facility, Saskatchewan, 5 MW, commissioning 2025-2026
+  #					3.	Tu Deh-Kah Geothermal, geothermal power facility, Fort Nelson BC, 5-7 MW, commissioning TBD
+  #					4.	Alberta No. 1, geothermal heat and power facility, Alberta, 5 MW, commissioning TBD
+  # 					5.	DP Energy Uisce Tapa, tidal energy, Bay of Fundy Nova Scotia, 9 MW, commissioning TBD
+  #					6.	Sustainable Marine Energy, tidal energy, Bay of Fundy Nova Scotia, 9 MW, will not commission, parent company went bankrupt
+  # 					1 and 2 are already in vData Electric Units other are updated (2028 is arbitrary)
+
+  #                               Year xUnGCCI (kW)
+  AddCapacity(data,"AB_New_Geo",  2028,  5000)
+  AddCapacity(data,"BC_New_Geo",  2028,  6000)
+  AddCapacity(data,"NS_New_Wave", 2028,  9000)
 
   WriteDisk(db,"EGInput/UnOnLine",UnOnLine)
   WriteDisk(db,"EGInput/xUnGCCI",xUnGCCI)
