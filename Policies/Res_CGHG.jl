@@ -17,7 +17,7 @@
 #
 # The policy reduces energy demand by 16.1 PJ in 2026 in the residential sector. 
 # The assumption is that reductions increase linearly from 2021 to 2026 to reach that target.
-# We assume that 116 667 houses per year are retrofited per year, at a cost of $5000 each ($583.3 million per year)
+# We assume that 116 667 houses per year are retrofitted per year, at a cost of $5000 each ($583.3 million per year)
 # Last updated by Yang Li on 2024-06-12
 #
 
@@ -90,10 +90,14 @@ function AllocateReduction(data::RControl,year,areas,ecs,techs,enduses)
   (; ECs) = data
   (; Dmd,DmdSavings,DmdSavingsAdditional,DmdSavingsStart) = data
   (; DmdSavingsTotal,PERReduction,PERReductionAdditional) = data
-  (; PERReductionStart,ReductionAdditional) = data
+  (; PERReductionStart,ReductionAdditional,PER) = data
   
   DmdTotal = sum(Dmd[enduse,tech,ec,area] for enduse in enduses, tech in techs,
     ec in ECs, area in areas)
+  loc1 = sum(PER[enduse,tech,ec,area] for enduse in enduses, tech in techs,
+    ec in ECs, area in areas)
+  print("\nDmdTotal: ", DmdTotal)
+  print("\nPERTotal: ", loc1)
 
   #
   # Reductions from Previous Policies
@@ -137,6 +141,7 @@ function AllocateReduction(data::RControl,year,areas,ecs,techs,enduses)
     @finite_math PERReduction[enduse,tech,ec,area,year] = DmdSavingsTotal[year]/DmdTotal
   end
   
+  return(DmdTotal)
 end
 
 function ResPolicy(db)
@@ -160,12 +165,6 @@ function ResPolicy(db)
   years = collect(Yr(2023):Yr(2026))
 
   #
-  # Total Demands
-  #  
-  DmdTotal = sum(Dmd[enduse,tech,ec,area] for enduse in enduses, tech in Techs,
-                                              ec in ECs, area in areas)
-
-  #
   # Policy results is a reduction in demand (PJ) converted to TBtu
   #  
   ReductionAdditional[Yr(2023)] = 8.1
@@ -179,17 +178,22 @@ function ResPolicy(db)
 
   #
   # Add adjustment after first year to account for feedback
-  #  
-  @. Adjustment = 1.00
+  # TODO Promula: This is coded in such a way that implies the coder believed
+  # Adjustment was set to 1 for all years, which is not what happens - PNV Feb 11 2025
+  # 
+  for year in years
+    Adjustment[year] = 1.00
+  end
   
   for year in years
     Adjustment[year] = Adjustment[year-1]+0.03
     ReductionAdditional[year] = ReductionAdditional[year]*Adjustment[year]
   end
 
-  for year in years
-    AllocateReduction(data,year,areas,ECs,Techs,enduses)
-  end
+  DmdTotal = AllocateReduction(data,Yr(2023),areas,ECs,Techs,enduses)
+  DmdTotal = AllocateReduction(data,Yr(2024),areas,ECs,Techs,enduses)
+  DmdTotal = AllocateReduction(data,Yr(2025),areas,ECs,Techs,enduses)
+  DmdTotal = AllocateReduction(data,Yr(2026),areas,ECs,Techs,enduses)
 
   #
   # Fraction Removed each Year
