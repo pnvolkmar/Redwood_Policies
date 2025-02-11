@@ -1,12 +1,8 @@
 #
-# Ind_CleanBC_Cmnt.jl - Programme de biomasse foresti�re r�siduelle (industries et commercial)
-#
-# Target 124 kt GHG by 2024 in QC; assume commercial amounts are negligible.
-# Approach: Use DmFrac to substitute petroleum coke with biomass in cement and natural gas 
-# with biomass in Food & Tobacco
-# See QC BiomasseProgramme.xlsx
-# (RW 06/02/2021)
-# Updated fuel switching targets for Ref22 tuning (RST 06Sept2022)
+# Ind_CleanBC_Cmnt.jl. Simulates CleanBC investments into decarbonizing the cement sector.
+# Typically aligned to the base case, so emissions reductions are assumed to be non-incremental.
+# Biomass is substituted for natural gas in the BC cement sector. Aligned to expected emissions reductions from
+# British Columbia.
 #
 
 using SmallModel
@@ -14,9 +10,9 @@ using SmallModel
 module Ind_CleanBC_Cmnt
 
 import ...SmallModel: ReadDisk,WriteDisk,Select
-import ...SmallModel: HisTime,ITime,MaxTime,First,Future,Final,Yr
-import ...SmallModel: DB
+import ...SmallModel: ITime,HisTime,MaxTime,Zero,First,Last,Future,Final,Yr
 import ...SmallModel: @finite_math,finite_inverse,finite_divide,finite_power,finite_exp,finite_log
+import ...SmallModel: DB
 
 const VariableArray{N} = Array{Float64,N} where {N}
 const SetArray = Vector{String}
@@ -54,6 +50,7 @@ Base.@kwdef struct IControl
   ANMap::VariableArray{2} = ReadDisk(db,"E2020DB/ANMap") # [Area,Nation] Map between Area and Nation
   DInvExo::VariableArray{5} = ReadDisk(db,"$Input/DInvExo") # [Enduse,Tech,EC,Area,Year] device Exogenous Investments (M$/Yr)
   DmdRef::VariableArray{5} = ReadDisk(BCNameDB,"$Outpt/Dmd") # [Enduse,Tech,EC,Area,Year] Demand (TBtu/Yr)
+  DmFracMax::VariableArray{6} = ReadDisk(db,"$Input/DmFracMax") # [Enduse,Fuel,Tech,EC,Area,Year] Demand Fuel/Tech Fraction Maximum (Btu/Btu)
   DmFracMin::VariableArray{6} = ReadDisk(db,"$Input/DmFracMin") # [Enduse,Fuel,Tech,EC,Area,Year] Demand Fuel/Tech Fraction Minimum (Btu/Btu)
   xDmFrac::VariableArray{6} = ReadDisk(db,"$Input/xDmFrac") # [Enduse,Fuel,Tech,EC,Area,Year] Energy Demands Fuel/Tech Split (Fraction)
   xInflation::VariableArray{2} = ReadDisk(db,"MInput/xInflation") # [Area,Year] Inflation Index ($/$)
@@ -73,53 +70,143 @@ function IndPolicy(db::String)
   (; Area,EC,Enduse) = data 
   (; Fuel,Nation) = data
   (; Tech) = data
-  (; DInvExo,DmFracMin) = data
+  (; DInvExo,DmFracMin,DmFracMax) = data
   (; PolicyCost,Target,xDmFrac,xInflation) = data
-
   #
-  # Select Policy Sets (Enduse,Tech,EC)
-  #  
-  CN = Select(Nation,"CN")
-  years = collect(Yr(2022):Yr(2050))
-  areas = Select(Area,"BC")
-  ecs = Select(EC,"Cement")
+  # Substitution of biomass for natural gas occurs through the
+  # provision of process heat used in cement
+  #
+  area = Select(Area,"BC")
+  enduse = Select(Enduse,"Heat")
+  ec = Select(EC,"Cement") 
   tech = Select(Tech,"Gas")
-  enduses = Select(Enduse,"Heat")
-
-  for year in years
-    Target[year] = 0.0168
-  end
-
-  Biomass = Select(Fuel,"Biomass")
   NaturalGas = Select(Fuel,"NaturalGas")
+  Biomass = Select(Fuel,"Biomass")
 
-  for year in years, area in areas, ec in ecs, eu in enduses
-    xDmFrac[eu,Biomass,tech,ec,area,year] = 
-      xDmFrac[eu,Biomass,tech,ec,area,year] + Target[year]
-    xDmFrac[eu,NaturalGas,tech,ec,area,year] = 
-      xDmFrac[eu,NaturalGas,tech,ec,area,year] - Target[year]
+  # Natural gas demand fractions
+  xDmFrac[enduse,NaturalGas,tech,ec,area,Yr(2023)]=0.864
+  xDmFrac[enduse,NaturalGas,tech,ec,area,Yr(2024)]=0.801
+  xDmFrac[enduse,NaturalGas,tech,ec,area,Yr(2025)]=0.680
+  xDmFrac[enduse,NaturalGas,tech,ec,area,Yr(2026)]=0.686
+  xDmFrac[enduse,NaturalGas,tech,ec,area,Yr(2027)]=0.709
+  xDmFrac[enduse,NaturalGas,tech,ec,area,Yr(2028)]=0.703
+  xDmFrac[enduse,NaturalGas,tech,ec,area,Yr(2029)]=0.706
+  xDmFrac[enduse,NaturalGas,tech,ec,area,Yr(2030)]=0.709
+  xDmFrac[enduse,NaturalGas,tech,ec,area,Yr(2031)]=0.701
+  xDmFrac[enduse,NaturalGas,tech,ec,area,Yr(2032)]=0.704
+  xDmFrac[enduse,NaturalGas,tech,ec,area,Yr(2033)]=0.707
+  xDmFrac[enduse,NaturalGas,tech,ec,area,Yr(2034)]=0.700
+  xDmFrac[enduse,NaturalGas,tech,ec,area,Yr(2035)]=0.713
+  xDmFrac[enduse,NaturalGas,tech,ec,area,Yr(2036)]=0.717
+  xDmFrac[enduse,NaturalGas,tech,ec,area,Yr(2037)]=0.710
+  xDmFrac[enduse,NaturalGas,tech,ec,area,Yr(2038)]=0.714
+  xDmFrac[enduse,NaturalGas,tech,ec,area,Yr(2039)]=0.717
+  xDmFrac[enduse,NaturalGas,tech,ec,area,Yr(2040)]=0.717
+  xDmFrac[enduse,NaturalGas,tech,ec,area,Yr(2041)]=0.717
+  xDmFrac[enduse,NaturalGas,tech,ec,area,Yr(2042)]=0.717
+  xDmFrac[enduse,NaturalGas,tech,ec,area,Yr(2043)]=0.717
+  xDmFrac[enduse,NaturalGas,tech,ec,area,Yr(2044)]=0.717
+  xDmFrac[enduse,NaturalGas,tech,ec,area,Yr(2045)]=0.717
+  xDmFrac[enduse,NaturalGas,tech,ec,area,Yr(2046)]=0.717
+  xDmFrac[enduse,NaturalGas,tech,ec,area,Yr(2047)]=0.717
+  xDmFrac[enduse,NaturalGas,tech,ec,area,Yr(2048)]=0.717
+  xDmFrac[enduse,NaturalGas,tech,ec,area,Yr(2049)]=0.717
+  xDmFrac[enduse,NaturalGas,tech,ec,area,Yr(2050)]=0.717
 
-    DmFracMin[eu,Biomass,tech,ec,area,year] = 
-      xDmFrac[eu,Biomass,tech,ec,area,year]
-    DmFracMin[eu,NaturalGas,tech,ec,area,year] = 
-      xDmFrac[eu,NaturalGas,tech,ec,area,year]
+  # Biomass demand fractions
+  xDmFrac[enduse,Biomass,tech,ec,area,Yr(2023)]=0.025
+  xDmFrac[enduse,Biomass,tech,ec,area,Yr(2024)]=0.029
+  xDmFrac[enduse,Biomass,tech,ec,area,Yr(2025)]=0.129
+  xDmFrac[enduse,Biomass,tech,ec,area,Yr(2026)]=0.125
+  xDmFrac[enduse,Biomass,tech,ec,area,Yr(2027)]=0.124
+  xDmFrac[enduse,Biomass,tech,ec,area,Yr(2028)]=0.122
+  xDmFrac[enduse,Biomass,tech,ec,area,Yr(2029)]=0.129
+  xDmFrac[enduse,Biomass,tech,ec,area,Yr(2030)]=0.127
+  xDmFrac[enduse,Biomass,tech,ec,area,Yr(2031)]=0.116
+  xDmFrac[enduse,Biomass,tech,ec,area,Yr(2032)]=0.112
+  xDmFrac[enduse,Biomass,tech,ec,area,Yr(2033)]=0.110
+  xDmFrac[enduse,Biomass,tech,ec,area,Yr(2034)]=0.117
+  xDmFrac[enduse,Biomass,tech,ec,area,Yr(2035)]=0.115
+  xDmFrac[enduse,Biomass,tech,ec,area,Yr(2036)]=0.112
+  xDmFrac[enduse,Biomass,tech,ec,area,Yr(2037)]=0.119
+  xDmFrac[enduse,Biomass,tech,ec,area,Yr(2038)]=0.107
+  xDmFrac[enduse,Biomass,tech,ec,area,Yr(2039)]=0.104
+  xDmFrac[enduse,Biomass,tech,ec,area,Yr(2040)]=0.101
+  xDmFrac[enduse,Biomass,tech,ec,area,Yr(2041)]=0.101
+  xDmFrac[enduse,Biomass,tech,ec,area,Yr(2042)]=0.101
+  xDmFrac[enduse,Biomass,tech,ec,area,Yr(2043)]=0.101
+  xDmFrac[enduse,Biomass,tech,ec,area,Yr(2044)]=0.101
+  xDmFrac[enduse,Biomass,tech,ec,area,Yr(2045)]=0.101
+  xDmFrac[enduse,Biomass,tech,ec,area,Yr(2046)]=0.101
+  xDmFrac[enduse,Biomass,tech,ec,area,Yr(2047)]=0.101
+  xDmFrac[enduse,Biomass,tech,ec,area,Yr(2048)]=0.101
+  xDmFrac[enduse,Biomass,tech,ec,area,Yr(2049)]=0.101
+  xDmFrac[enduse,Biomass,tech,ec,area,Yr(2050)]=0.101
+
+  # Set min/max constraints for 2023-2040
+  years = collect(Yr(2023):Yr(2040))
+  for year in years
+    DmFracMin[enduse,Biomass,tech,ec,area,year] = xDmFrac[enduse,Biomass,tech,ec,area,year]
+    DmFracMax[enduse,NaturalGas,tech,ec,area,year] = xDmFrac[enduse,NaturalGas,tech,ec,area,year]
   end
 
-  WriteDisk(db,"$Input/xDmFrac",xDmFrac)
+  # Set min/max constraints for 2041-2050
+  years = collect(Yr(2041):Yr(2050))
+  for year in years
+    DmFracMin[enduse,Biomass,tech,ec,area,year] = xDmFrac[enduse,Biomass,tech,ec,area,year-1]
+    DmFracMin[enduse,NaturalGas,tech,ec,area,year] = xDmFrac[enduse,NaturalGas,tech,ec,area,year-1]
+  end
+
   WriteDisk(db,"$Input/DmFracMin",DmFracMin)
+  WriteDisk(db,"$Input/DmFracMax",DmFracMax)
   
   #
-  # Program Costs $M  
-  #  
-  PolicyCost[Yr(2022)] = 1.32
+  # Program Costs $M
+  #
+  enduse = Select(Enduse,"Heat")
+  tech = Select(Tech,"Gas")
+  ec = Select(EC,"Cement")
+  area = Select(Area,"BC")
 
-  enduses = Select(Enduse,"Heat")
-  for area in areas, ec in ecs, tech in tech, eu in enduses
-    DInvExo[eu,tech,ec,area,Yr(2022)] = DInvExo[eu,tech,ec,area,Yr(2022)]+
-      PolicyCost[Yr(2022)]/xInflation[area,Yr(2022)]/2
-  end
-  
+  PolicyCost[Yr(2025)] = 12.30
+
+  DInvExo[enduse,tech,ec,area,Yr(2025)] = DInvExo[enduse,tech,ec,area,Yr(2025)] + 
+  PolicyCost[Yr(2025)]/xInflation[area,Yr(2025)]/2
+
   WriteDisk(db,"$Input/DInvExo",DInvExo)
+  
+  #
+  # Substitution of biomass for natural gas occurs through the
+  # provision of process heat used in cement
+  #
+  area = Select(Area,"BC")
+  enduse = Select(Enduse,"Heat")
+  ec = Select(EC,"Cement")
+  tech = Select(Tech,"Biomass")
+  waste = Select(Fuel,"Waste")
+
+  # Set waste demand fractions to 2025 values for future years
+  years = collect(Yr(2026):Yr(2050))
+  for year in years
+    xDmFrac[enduse,waste,tech,ec,area,year] = xDmFrac[enduse,waste,tech,ec,area,Yr(2025)]
+  end
+
+  # Set min/max demand fractions for 2026-2040
+  years = collect(Yr(2026):Yr(2040))
+  for year in years
+    DmFracMin[enduse,waste,tech,ec,area,year] = xDmFrac[enduse,waste,tech,ec,area,year]
+    DmFracMax[enduse,waste,tech,ec,area,year] = xDmFrac[enduse,waste,tech,ec,area,year]  
+  end
+
+  # Set min/max demand fractions for 2041-2050
+  years = collect(Yr(2041):Yr(2050))
+  for year in years
+    DmFracMin[enduse,waste,tech,ec,area,year] = xDmFrac[enduse,waste,tech,ec,area,year-1]
+    DmFracMin[enduse,waste,tech,ec,area,year] = xDmFrac[enduse,waste,tech,ec,area,year-1]
+  end
+
+  WriteDisk(db,"$Input/DmFracMin",DmFracMin)
+  WriteDisk(db,"$Input/DmFracMax",DmFracMax)
 end
 
 function PolicyControl(db)
