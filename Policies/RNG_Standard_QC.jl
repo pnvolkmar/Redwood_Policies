@@ -271,9 +271,9 @@ end
 Base.@kwdef struct EControl
   db::String
   
-  CalDB::String = "ECalDB"
-  Input::String = "EInput"
-  Outpt::String = "EOutput"
+  CalDB::String = "EGCalDB"
+  Input::String = "EGInput"
+  Outpt::String = "EGOutput"
   BCNameDB::String = ReadDisk(db,"E2020DB/BCNameDB") #  Base Case Name
 
   Area::SetArray = ReadDisk(db,"E2020DB/AreaKey")
@@ -297,8 +297,8 @@ Base.@kwdef struct EControl
   ANMap::VariableArray{2} = ReadDisk(db,"E2020DB/ANMap") # [Area,Nation] Map between Area and Nation
   FlFrNew::VariableArray{4} = ReadDisk(db,"EGInput/FlFrNew") # [FuelEP,Plant,Area,Year] Fuel Fraction for New Plants
   UnArea::Array{String} = ReadDisk(db,"EGInput/UnArea") # [Unit] Area Pointer
-  UnCounter::VariableArray{1} = ReadDisk(db,"EGInput/UnCounter") #[Year]  Number of Units
   UnCogen::VariableArray{1} = ReadDisk(db,"EGInput/UnCogen") # [Unit] Industrial Self-Generation Flag (1=Self-Generation)
+  UnCounter::VariableArray{1} = ReadDisk(db,"EGInput/UnCounter") #[Year]  Number of Units
   UnFlFrMax::VariableArray{3} = ReadDisk(db,"EGInput/UnFlFrMax") # [Unit,FuelEP,Year] Fuel Fraction Maximum (Btu/Btu)
   UnFlFrMin::VariableArray{3} = ReadDisk(db,"EGInput/UnFlFrMin") # [Unit,FuelEP,Year] Fuel Fraction Minimum (Btu/Btu)
   xUnFlFr::VariableArray{3} = ReadDisk(db,"EGInput/xUnFlFr") # [Unit,FuelEP,Year] Fuel Fraction (Btu/Btu)
@@ -365,8 +365,7 @@ function ElecPolicy(db)
     xUnFlFr[unit,RNG,year] = xUnFlFr[unit,RNG,year]+
                            xUnFlFr[unit,NaturalGas,year]*Target[year]
                            
-    xUnFlFr[unit,NaturalGas,year] = xUnFlFr[unit,NaturalGas,year]+
-      xUnFlFr[unit,NaturalGas,year]*(1-Target[year])
+    xUnFlFr[unit,NaturalGas,year] = xUnFlFr[unit,NaturalGas,year]*(1-Target[year])
       
     #if (unit == 1256) && (year == Yr(2050))
     # loc1 = xUnFlFr[unit,RNG,year]

@@ -62,7 +62,7 @@ function ResPolicy(db)
   (; Fuel) = data
   (; Tech) = data    
   (; DmFracRef,DmFracMin,Target,xDmFrac) = data
-
+  
   
   area = Select(Area,"BC")
   tech = Select(Tech,"Gas")
@@ -160,7 +160,7 @@ function ComPolicy(db)
   # 
   # A portion of Natural Gas demands are now RNG
   #  
-  years = collect(Yr(2022):Yr(2050))
+  years = collect(Future:Yr(2050))
   areas = Select(Area,"BC")
   techs = Select(Tech,"Gas")
   RNG = Select(Fuel,"RNG")
@@ -299,18 +299,17 @@ Base.@kwdef struct EControl
 end
 
 
-function GetUtilityUnits(data,year)
+function GetUtilityUnits(data)
   (; UnArea,UnCogen,UnCounter,UnNation) = data
 
   #
   # Select Unit If (UnNation eq "CN") and (UnCogen eq 0) and (UnArea eq "BC")
   #
-  UnitsActive = 1:Int(UnCounter[year])
 
   UnitsNotCogen = Select(UnCogen,==(0.0))
   UnitsInCanada = Select(UnNation,==("CN"))
   UnitsInBC = Select(UnArea,==("BC"))
-  UnitsToAdjust = intersect(UnitsActive,UnitsNotCogen,UnitsInCanada,UnitsInBC)
+  UnitsToAdjust = intersect(UnitsNotCogen,UnitsInCanada,UnitsInBC)
 
   return UnitsToAdjust
 end
@@ -333,10 +332,10 @@ function ElecPolicy(db)
   Target[Yr(2024)] = 0.03
   Target[Future] = 0.01
   
-  years = collect(Future:Yr(2050))
+  years = collect(Future:Final)
   RNG = Select(FuelEP,"RNG")
   NaturalGas = Select(FuelEP,"NaturalGas")
-  units = GetUtilityUnits(data,Yr(2025))
+  units = GetUtilityUnits(data,)
   
   #
   #  A portion of NaturalGas demands are now Natural Gas
