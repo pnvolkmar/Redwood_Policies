@@ -89,13 +89,11 @@ function TransPolicy(db)
         DmFracMin[1,Electric,OffRoad,ec,CA,Yr(2021)])/(2035-2021)
   end
 
-  years = collect(Yr(2022):Final)
   for year in years, ec in ecs
     xDmFrac[1,Electric,OffRoad,ec,CA,year] = DmFracMin[1,Electric,OffRoad,ec,CA,year]
   end
 
   WriteDisk(db,"$Input/DmFracMin",DmFracMin)
-  WriteDisk(db,"$Input/xDmFrac",xDmFrac)
 end
 
 function PolicyControl(db)

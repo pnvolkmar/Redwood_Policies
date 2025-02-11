@@ -204,7 +204,7 @@ function TransPolicy(db)
   
   years = collect(Yr(2045):Yr(2050))
   for year in years, tech in techs
-    DPLGoal[enduse,tech,Freight,CA,year] = 1.5
+    DPLGoal[enduse,tech,Freight,CA,year] = 1.0
   end
   
   years = collect(Yr(2030):Yr(2044))
@@ -214,7 +214,7 @@ function TransPolicy(db)
         (2045-2029)
   end
     
-  years = collect(Yr(2030):Yr(2044))
+  years = collect(Yr(2030):Yr(2050))
   for year in years, tech in techs
     DPL[enduse,tech,Freight,CA,year] = DPLGoal[enduse,tech,Freight,CA,year]
   end

@@ -72,7 +72,7 @@ function TransPolicy(db)
     POCX[1,Ethanol,tech,ec,poll,CA,year] = 0.0
   end
 
-  years = collect(Future:Yr(2029))
+  years = collect(Future:Yr(2030))
   for year in years, poll in Polls, ec in ECs, tech in Techs
     POCX[1,Ethanol,tech,ec,poll,CA,year] = POCX[1,Ethanol,tech,ec,poll,CA,year-1]+
       (POCX[1,Ethanol,tech,ec,poll,CA,Yr(2030)]-POCX[1,Ethanol,tech,ec,poll,CA,Last])/
@@ -90,7 +90,7 @@ function TransPolicy(db)
     POCX[1,Ethanol,tech,ec,poll,CA,year] = 0.0
   end
 
-  years = collect(Future:Yr(2029))
+  years = collect(Future:Yr(2030))
   for year in years, poll in Polls, ec in ECs, tech in Techs
     POCX[1,Ethanol,tech,ec,poll,CA,year] = POCX[1,Ethanol,tech,ec,poll,CA,year-1]+
       (POCX[1,Ethanol,tech,ec,poll,CA,Yr(2030)]-POCX[1,Ethanol,tech,ec,poll,CA,Last])/

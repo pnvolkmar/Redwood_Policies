@@ -76,21 +76,23 @@ function TransPolicy(db)
   Freight = Select(EC,"Freight");
   Carriage = Select(Enduse,"Carriage");
   years = collect(Yr(2023):Yr(2040));
-  techs = Select(Tech,["HDV2B3Electric","HDV45Electric","HDV67Electric","HDV8Electric"]);
+  techs = Select(Tech,["HDV2B3Electric","HDV45Electric","HDV67Electric","HDV8Electric","HDV67FuelCell","HDV8FuelCell"]);
 
   # 
   # Read in EVInput, fractional market share of on road freight trucks
   # * EVInput represents the fraction of the Tech to switch to ZEV
   # 
 
-  ZEVInput[techs,ON,years] .=[
-    # Electric Shares       2023    2024    2025    2026    2027    2028    2029    2030    2031    2032    2033    2034    2035    2036    2037    2038    2039    2040
-                            0.0489  0.0787  0.1133  0.1185  0.0732  0.0768  0.0810  0.0859  0.0933  0.1012  0.1099  0.1201  0.1319  0.1489  0.1693  0.1957  0.2328  0.2892 # HDV2B3
-                            0.0120  0.0190  0.0240  0.0290  0.0110  0.0130  0.0150  0.0180  0.0200  0.0240  0.0270  0.0320  0.0390  0.0460  0.0560  0.0770  0.0880  0.1030 # HDV45
-                            0.0192  0.0227  0.0198  0.0234  0.0144  0.0174  0.0230  0.0275  0.0316  0.0371  0.0428  0.0498  0.0589  0.0706  0.0867  0.1067  0.1411  0.2089 # HDV67
-                            0.0290  0.0310  0.0290  0.0320  0.0180  0.0210  0.0320  0.0380  0.0440  0.0500  0.0570  0.0670  0.0800  0.0960  0.1180  0.1450  0.1920  0.2780 # HDV8
-  ]
-
+  ZEVInput[techs,ON,years] .= [
+    #2023    2024    2025    2026    2027    2028    2029    2030    2031    2032    2033    2034    2035    2036    2037    2038    2039    2040 # Electric Shares
+    0.063   0.095   0.129   0.139   0.092   0.100   0.110   0.121   0.131   0.143   0.157   0.174   0.194   0.222   0.257   0.306   0.384   0.499 # HDV2B3
+    0.013   0.020   0.025   0.030   0.012   0.015   0.017   0.020   0.024   0.028   0.032   0.038   0.046   0.056   0.069   0.107   0.130   0.166 # HDV45
+    0.012   0.015   0.011   0.014   0.009   0.011   0.014   0.017   0.020   0.022   0.023   0.025   0.028   0.030   0.033   0.036   0.039   0.045 # HDV67Electric
+    0.015   0.016   0.013   0.015   0.010   0.014   0.016   0.019   0.021   0.023   0.027   0.030   0.036   0.041   0.047   0.056   0.070   0.095 # HDV8Electric
+    0.000   0.000   0.001   0.001   0.001   0.001   0.003   0.004   0.005   0.006   0.007   0.009   0.011   0.013   0.017   0.021   0.026   0.034 # HDV67FuelCell
+    0.000   0.000   0.002   0.003   0.002   0.003   0.009   0.011   0.012   0.014   0.015   0.018   0.020   0.024   0.028   0.033   0.040   0.050 # HDV8FuelCell
+    ]
+  
   CN = Select(Nation,"CN");
   areas = findall(ANMap[:,CN] .== 1);
   for year in years, area in areas, tech in techs
@@ -113,7 +115,7 @@ function TransPolicy(db)
   # * market share vs trains and boats
   # 
   
-  techs = Select(Tech,(from="HDV2B3Gasoline",to="HDV2B3Propane"))
+  techs = Select(Tech,(from="HDV2B3Gasoline",to="HDV2B3FuelCell"))
   for area in areas, year in years
     TTMSOld[area,year] = sum(xMMSF[Carriage,tech,Freight,area,year] for tech in techs)
   end
@@ -132,7 +134,7 @@ function TransPolicy(db)
       TTMSChange[area,year]
   end
 
-  techs = Select(Tech,(from="HDV45Gasoline",to="HDV45Propane"))
+  techs = Select(Tech,(from="HDV45Gasoline",to="HDV45FuelCell"))
   for area in areas, year in years
     TTMSOld[area,year] = sum(xMMSF[Carriage,tech,Freight,area,year] for tech in techs)
   end
@@ -152,15 +154,18 @@ function TransPolicy(db)
   end
 
 
-  techs = Select(Tech,(from="HDV67Gasoline",to="HDV67Propane"))
+  techs = Select(Tech,(from="HDV67Gasoline",to="HDV67FuelCell"))
   for area in areas, year in years
     TTMSOld[area,year] = sum(xMMSF[Carriage,tech,Freight,area,year] for tech in techs)
   end
   
   HDV67Electric = Select(Tech,"HDV67Electric");
-  for area in areas, year in years
-    MSFTarget[HDV67Electric,area,year] = ZEVInput[HDV67Electric,area,year]*
+  techs = Select(Tech,["HDV67Electric","HDV67FuelCell"]);
+  for area in areas, year in years, tech in techs
+    MSFTarget[tech,area,year] = ZEVInput[tech,area,year]*
       TTMSOld[area,year]
+  end
+  for area in areas, year in years
     TTMSNew[area,year] = TTMSOld[area,year]-MSFTarget[HDV67Electric,area,year]
     @finite_math TTMSChange[area,year] = TTMSNew[area,year] / TTMSOld[area,year]
   end
@@ -171,15 +176,18 @@ function TransPolicy(db)
       TTMSChange[area,year]
   end
   
-  techs = Select(Tech,(from="HDV8Gasoline",to="HDV8Propane"))
+  techs = Select(Tech,(from="HDV8Gasoline",to="HDV8FuelCell"))
   for area in areas, year in years
     TTMSOld[area,year] = sum(xMMSF[Carriage,tech,Freight,area,year] for tech in techs)
   end
   
   HDV8Electric = Select(Tech,"HDV8Electric");
-  for area in areas, year in years
-    MSFTarget[HDV8Electric,area,year] = ZEVInput[HDV8Electric,area,year]*
+  techs = Select(Tech,["HDV8Electric","HDV8FuelCell"]);
+  for area in areas, year in years, tech in techs
+    MSFTarget[tech,area,year] = ZEVInput[tech,area,year]*
       TTMSOld[area,year]
+  end
+  for area in areas, year in years
     TTMSNew[area,year] = TTMSOld[area,year]-MSFTarget[HDV8Electric,area,year]
     @finite_math TTMSChange[area,year] = TTMSNew[area,year] / TTMSOld[area,year]
   end
@@ -191,7 +199,7 @@ function TransPolicy(db)
   end
 
   years = collect(Yr(2041):Final);
-  techs = Select(Tech,(from="HDV2B3Gasoline",to="HDV8Propane"))
+  techs = Select(Tech,(from="HDV2B3Gasoline",to="HDV8FuelCell"))
   for year in years, area in areas, tech in techs
     MSFTarget[tech,area,year] = MSFTarget[tech,area,Yr(2040)]
   end
