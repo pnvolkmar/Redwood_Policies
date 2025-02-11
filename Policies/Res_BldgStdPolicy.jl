@@ -2,7 +2,7 @@
 # Res_BldgStdPolicy.jl 
 #
 # - Future building code standards
-# Last updated by Kevin Palmer-Wilson on 2023-06-09
+# Last updated by Yang Li on 2024-06-12
 #
 ########################
 #
@@ -90,7 +90,7 @@ function ResPolicy(db)
 
   @. EEImprovement = 0.0
   @. EIImprovement = 0.0
-  years = collect(Yr(2022):Yr(2025))
+  years = collect(Yr(2023):Yr(2025))
   BC = Select(Area,"BC")
   for year in years
     EEImprovement[BC,year] = 0.504
@@ -112,25 +112,25 @@ function ResPolicy(db)
   end
 
   areas = Select(Area,["ON","PE"])
-  years = collect(Yr(2022):Final)
+  years = collect(Yr(2023):Final)
   for year in years, area in areas
     EEImprovement[area,year] = 0.2
   end
 
   NB = Select(Area,"NB")
-  years = collect(Yr(2022):Final)
+  years = collect(Yr(2023):Final)
   for year in years
     EEImprovement[NB,year] = 0.2
   end
 
   SK = Select(Area,"SK")
-  years = collect(Yr(2022):Final)
+  years = collect(Yr(2023):Final)
   for year in years
     EEImprovement[SK,year] = 0.2
   end
   
   areas = Select(Area,["BC","ON","PE","NB","SK"])
-  years = collect(Yr(2022):Final)
+  years = collect(Yr(2023):Final)
   for year in years, area in areas
     EIImprovement[area,year] = 1 / (1 - EEImprovement[area,year])
   end
@@ -143,7 +143,7 @@ function ResPolicy(db)
     PEMMAvg_BC[Heat,tech,ec,BC] = sum(PEMMBase[Heat,tech,ec,BC,year] for year in years) / 5.0
   end
 
-  years = collect(Yr(2022):Final)
+  years = collect(Yr(2023):Final)
   for tech in Techs, ec in ECs, year in years
     PEMM[Heat,tech,ec,BC,year] = max(PEMM[Heat,tech,ec,BC,year],
       PEMMAvg_BC[Heat,tech,ec,BC]*(1+EIImprovement[BC,year]))
@@ -153,6 +153,7 @@ function ResPolicy(db)
   end
 
   areas = Select(Area,["ON","PE"])
+  years = collect(Yr(2023):Final)
   for tech in Techs, ec in ECs, year in years, area in areas
     PEMM[Heat,tech,ec,area,year] = max(PEMM[Heat,tech,ec,area,year],
       PEMMBase[Heat,tech,ec,area,Yr(2009)]*(1+EIImprovement[area,year]))
@@ -161,6 +162,7 @@ function ResPolicy(db)
         0.98,PEEBase[Heat,tech,ec,area,Yr(2009)]*(1+EIImprovement[area,year])))
   end
 
+  years = collect(Yr(2023):Final)
   for tech in Techs, ec in ECs, year in years
     PEMM[Heat,tech,ec,NB,year] = max(PEMM[Heat,tech,ec,NB,year],
       PEMMBase[Heat,tech,ec,NB,Yr(2009)]*(1+EIImprovement[NB,year]))
@@ -169,6 +171,7 @@ function ResPolicy(db)
         0.98,PEEBase[Heat,tech,ec,NB,Yr(2009)]*(1+EIImprovement[NB,year])))
   end
 
+  years = collect(Yr(2023):Final)
   for tech in Techs, ec in ECs, year in years
     PEMM[Heat,tech,ec,SK,year] = max(PEMM[Heat,tech,ec,SK,year],
       PEMMBase[Heat,tech,ec,SK,Yr(2009)]*(1+EIImprovement[SK,year]))

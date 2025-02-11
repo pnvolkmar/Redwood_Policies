@@ -99,17 +99,17 @@ function MacroPolicy(db)
   #  
   Coeffs = collect(1:3)
   areas = Select(Area,["ON","QC"])
-  SingleFamily = Select(ECC,"SingleFamily")
+  SingleFamilyDetached = Select(ECC,"SingleFamilyDetached")
   HFC = Select(Poll,"HFC")
   MECoeff[Coeffs,Yr(2010)] = [3.63098,  -0.74908,  0.52583]
   MECoeff[Coeffs,Yr(2020)] = [3.63098,  -0.74908,  0.52583]
   MECoeff[Coeffs,Yr(2030)] = [1.20609,  -0.59925,  0.78994]
-  InterpolateCoefficients(data,SingleFamily,HFC,areas)
-  eccs = Select(ECC,(from = "SingleFamily",to = "CoalMining"))
+  InterpolateCoefficients(data,SingleFamilyDetached,HFC,areas)
+  eccs = Select(ECC,(from = "SingleFamilyDetached",to = "CoalMining"))
   for year in Years, area in areas, ecc in eccs
-    MEA0[ecc,HFC,area,year] = MEA0[SingleFamily,HFC,area,year]
-    MEB0[ecc,HFC,area,year] = MEB0[SingleFamily,HFC,area,year] 
-    MEC0[ecc,HFC,area,year] = MEC0[SingleFamily,HFC,area,year]
+    MEA0[ecc,HFC,area,year] = MEA0[SingleFamilyDetached,HFC,area,year]
+    MEB0[ecc,HFC,area,year] = MEB0[SingleFamilyDetached,HFC,area,year] 
+    MEC0[ecc,HFC,area,year] = MEC0[SingleFamilyDetached,HFC,area,year]
   end
 
   WriteDisk(db,"MEInput/MEA0",MEA0)

@@ -72,37 +72,20 @@ function ElecPolicy(db)
   nodex = Select(NodeX,"MB")
   years = collect(Yr(2040):Final)
   for year in years, month in Months, timep in TimePs
-    HDXLoad[node,nodex,timep,month,year] = HDXLoad[node,nodex,timep,month,year] + 
-    	100 + 190
+    HDXLoad[node,nodex,timep,month,year] = HDXLoad[node,nodex,timep,month,year]+100+190
   end
 
-  # 
-  # Adding a new contract for 500 MW starting in April 2028 (hence the 9.0/12.0 factor 
-  # below), based on SK response to the questionnaire for the 2020 update. No additional 
-  # info provided, so we assumed transmission infrastructure will increase by the same 
-  # amount (i.e. LLMax also increases by 500 MW). JSLandry; Jul 6, 2020.
-  # 
-  # Update: there seems to actually be a project to build a new 500 MW line, so the 
-  # 500 MW contract is implicitly assumed to be split between this new line and 
-  # existing infrastructure. JSLandry; Nov 3, 2020.  
-  #  
-  for month in Months, timep in TimePs
-    HDXLoad[node,nodex,timep,month,Yr(2028)] = 
-      HDXLoad[node,nodex,timep,month,Yr(2028)] + 500*(9/12)
-    LLMax[node,nodex,timep,month,Yr(2028)] = 
-      LLMax[node,nodex,timep,month,Yr(2028)] + 500*(9/12)
-  end
-  
-  years = collect(Yr(2029):Final)
+  # TODO
+  # This block is duplicate of block above to match Promula version. 
+  # I don't know the original intention, but I doubt it's this. R.Levesque 2/6/25
+  #
+  years = collect(Yr(2040):Final)
   for year in years, month in Months, timep in TimePs
-    HDXLoad[node,nodex,timep,month,year] = HDXLoad[node,nodex,timep,month,year] + 500
-    LLMax[node,nodex,timep,month,year] = LLMax[node,nodex,timep,month,year] + 500
+    HDXLoad[node,nodex,timep,month,year] = HDXLoad[node,nodex,timep,month,year]+100+190
   end
 
   # 
   # QC to NB
-  #
-  
   #
   # We extend the 2020-2040 contract until 2050. The 2020-2040 contract is 
   # included in ElectricTransmission.txt and corresponds to a value of 
@@ -112,7 +95,7 @@ function ElecPolicy(db)
   nodex = Select(NodeX,"QC")
   years = collect(Yr(2041):Final)
   for year in years, month in Months, timep in TimePs
-    HDXLoad[node,nodex,timep,month,year] = HDXLoad[node,nodex,timep,month,year] + 255.5
+    HDXLoad[node,nodex,timep,month,year] = HDXLoad[node,nodex,timep,month,year]+255.5
   end
 
   # 
@@ -126,7 +109,6 @@ function ElecPolicy(db)
   # 
 
   WriteDisk(db,"EGInput/HDXLoad",HDXLoad)
-  WriteDisk(db,"EGInput/LLMax",LLMax)
 end
 
 function PolicyControl(db)

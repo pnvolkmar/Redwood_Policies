@@ -92,7 +92,7 @@ function MacroPolicy(db)
   #
   # Residential
   #  
-  eccs = Select(ECC,["SingleFamily","MultiFamily","OtherResidential"])
+  eccs = Select(ECC,["SingleFamilyDetached","SingleFamilyAttached","MultiFamily","OtherResidential"])
   for ecc in eccs, area in areas, year in years
     MEPOCX[ecc,HFC,area,year] = MEPOCX[ecc,HFC,area,year]*Target[year]
   end

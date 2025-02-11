@@ -5,6 +5,8 @@
 # Details about the underlying assumptions for this policy are available in the following file:
 # \\ncr.int.ec.gc.ca\shares\e\ECOMOD\Documentation\Policy - Buildings Policies.docx.
 #
+# Last updated by Yang Li on 2024-08-12
+#
 
 using SmallModel
 
@@ -80,8 +82,9 @@ function AllocateReduction(data::RControl,enduses,techs,ecs,areas,years)
   #
   # Total Demands
   #  
-  for year in years, area in areas, ec in ecs, tech in techs, enduse in enduses
-    DmdTotal[area,year] = sum(DmdRef[enduse,tech,ec,area,year])
+  for year in years, area in areas
+    DmdTotal[area,year] = sum(DmdRef[enduse,tech,ec,area,year] 
+                              for enduse in enduses, tech in techs, ec in ecs)
   end
 
   #
@@ -89,17 +92,17 @@ function AllocateReduction(data::RControl,enduses,techs,ecs,areas,years)
   #  
   for area in areas, year in years
     ReductionAdditional[area,year] = max((ReductionAdditional[area,year] - 
-        ReductionTotal[area,year-1]),0.0)
+    	ReductionTotal[area,year-1]),0.0)
     ReductionTotal[area,year] = ReductionAdditional[area,year] + 
-        ReductionTotal[area,year-1]
+    	ReductionTotal[area,year-1]
   end
 
   #
   # Fraction Removed each Year
   #  
   for area in areas, year in years
-    FractionRemovedAnnually[area,year] = ReductionAdditional[area,year] / 
-        DmdTotal[area,year]
+    @finite_math FractionRemovedAnnually[area,year] = ReductionAdditional[area,year] / 
+    	DmdTotal[area,year]
   end
    
   #
@@ -129,8 +132,8 @@ function ResPolicy(db::String)
   #  
   CN = Select(Nation,"CN")
   techs = Select(Tech,["Electric","Gas","Coal","Oil","Biomass","Solar",
-        "LPG","Steam","Geothermal","HeatPump"])
-  years = collect(Yr(2022):Yr(2040))
+  	"LPG","Steam","Geothermal","HeatPump"])
+  years = collect(Yr(2023):Yr(2040))
   areas = Select(Area,["AB","NB","NS"])
 
   #
@@ -138,17 +141,10 @@ function ResPolicy(db::String)
   #
   
   ReductionAdditional[areas,years] .= [
-    #   2022 2023 2024 2025 2026 2027 2028 2029 2030 2031 2032 2033 2034 2035 2036 2037 2038 2039 2040
-        1886 1886 1886 1886 1886 1886 1886 1886 1457    0    0    0    0    0    0    0    0    0    0
-         193  193  193  193  193  193  193  193  193  193  193  193  170  125  125  125  125  125  125
-         203  203  203  203  203  203  203  203  203    0    0    0    0    0    0    0    0    0    0]
-  
-
-  # ReductionAdditional[areas,years] .= [
-  #   #    2022 2023 2024 2025 2026 2027 2028 2029 2030 2031 2032 2033 2034 2035 2036 2037 2038 2039 2040
-  #   AB   1886 1886 1886 1886 1886 1886 1886 1886 1457    0    0    0    0    0    0    0    0    0    0
-  #   NB    193  193  193  193  193  193  193  193  193  193  193  193  170  125  125  125  125  125  125
-  #   NS    203  203  203  203  203  203  203  203  203    0    0    0    0    0    0    0    0    0    0]
+  #   2023 2024 2025 2026 2027 2028 2029 2030 2031 2032 2033 2034 2035 2036 2037 2038 2039 2040
+      1886 1886 1886 1886 1886 1886 1886 1457    0    0    0    0    0    0    0    0    0    0  #AB
+      193  193  193  193  193  193  193  193  193  193  193  170  125  125  125  125  125  125  #NB
+      203  203  203  203  203  203  203  203    0    0    0    0    0    0    0    0    0    0] #NS
 
   #
   # Apply an annual adjustment to reductions to compensate for 'rebound' from less retirements
@@ -158,16 +154,11 @@ function ResPolicy(db::String)
   #
   
   AnnualAdjustment[years] = [
-    #   2022 2023 2024 2025 2026 2027 2028 2029 2030 2031 2032 2033 2034 2035 2036 2037 2038 2039 2040
-    #   1.52 1.63 1.75 1.88 1.99 2.10 2.20 2.31 1.96    0    0    0    0    0    0    0    0    0    0   
-    #   0.88 0.96 1.03 1.09 1.18 1.25 1.31 1.38 1.43 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00
-        1.24 1.31 1.38 1.44 1.51 1.57 1.63 1.68 1.75    0    0    0    0    0    0    0    0    0    0]
+    #   2023 2024 2025 2026 2027 2028 2029 2030 2031 2032 2033 2034 2035 2036 2037 2038 2039 2040
+    #   1.63 1.75 1.88 1.99 2.10 2.20 2.31 1.96    0    0    0    0    0    0    0    0    0    0   
+    #   0.96 1.03 1.09 1.18 1.25 1.31 1.38 1.43 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00
+        1.31 1.38 1.44 1.51 1.57 1.63 1.68 1.75    0    0    0    0    0    0    0    0    0    0]
 
-  # Read AnnualAdjustment\5(Area,Year)
-  # /    2022 2023 2024 2025 2026 2027 2028 2029 2030 2031 2032 2033 2034 2035 2036 2037 2038 2039 2040
-  # AB   1.52 1.63 1.75 1.88 1.99 2.10 2.20 2.31 1.96    0    0    0    0    0    0    0    0    0    0   
-  # NB   0.88 0.96 1.03 1.09 1.18 1.25 1.31 1.38 1.43 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00
-  # NS   1.24 1.31 1.38 1.44 1.51 1.57 1.63 1.68 1.75    0    0    0    0    0    0    0    0    0    0   
 
   #
   # Convert from TJ to TBtu
@@ -180,24 +171,25 @@ function ResPolicy(db::String)
   AllocateReduction(data,Enduses,techs,ECs,areas,years)
 
   #
+  # Program costs have been commented out as 2022 becomes the last historical year (Yang Li 2024-08-12)
   # Program Costs $M 
   #  
-  PolicyCost.= 0
-  AB = Select(Area,"AB")
-  PolicyCost[AB,Yr(2022)] = 20 / xInflation[AB,Yr(2018)]
+  # PolicyCost.= 0
+  # AB = Select(Area,"AB")
+  # PolicyCost[AB,Yr(2022)] = 20 / xInflation[AB,Yr(2018)]
   
   # 
-  # * Split out PolicyCost using reference Dmd values. DInv only uses Device Heat.
+  # Split out PolicyCost using reference Dmd values. DInv only uses Device Heat.
   #  
-  for enduse in Enduses, tech in techs, ec in ECs
-    DmdFrac[enduse,tech,ec,AB,Yr(2022)] = DmdRef[enduse,tech,ec,AB,Yr(2022)]/
-      DmdTotal[AB,Yr(2022)]
-    DInvExo[enduse,tech,ec,AB,Yr(2022)] = DInvExo[enduse,tech,ec,AB,Yr(2022)]+
-      (PolicyCost[AB,Yr(2022)]*DmdFrac[enduse,tech,ec,AB,Yr(2022)])      
-  end
+  # for enduse in Enduses, tech in techs, ec in ECs
+    # DmdFrac[enduse,tech,ec,AB,Yr(2022)] = DmdRef[enduse,tech,ec,AB,Yr(2022)]/
+    #   DmdTotal[AB,Yr(2022)]
+    # DInvExo[enduse,tech,ec,AB,Yr(2022)] = DInvExo[enduse,tech,ec,AB,Yr(2022)]+
+    #  (PolicyCost[AB,Yr(2022)]*DmdFrac[enduse,tech,ec,AB,Yr(2022)])      
+  # end
   
-  WriteDisk(db,"$Input/DInvExo",DInvExo)
-end
+  # WriteDisk(db,"$Input/DInvExo",DInvExo)
+end  #function ResPolicy
 
 function PolicyControl(db)
   @info "LCEFL_Res.jl - PolicyControl"

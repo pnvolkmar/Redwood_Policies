@@ -1,6 +1,6 @@
 #
 # LCEFC_HFC_Com.jl  - Policy that reduces HFC emissions from the retail sector in Ontario. 
-# Last updated by Kevin Palmer-Wilson on 2023-06-09
+# Last updated by Yang Li on 2024-09-24
 # More details about this policy are available in the following file: 
 # \\ncr.int.ec.gc.ca\shares\e\ECOMOD\Documentation\Policy - Buildings Policies.docx
 #
@@ -98,30 +98,28 @@ function MacroPolicy(db)
   # Ontario retail HFC reduction program 
   # Reduction in HFC emissions from policy in CO2e equivalent
   #  
-  years = collect(Yr(2022):Yr(2040))
+  years = collect(Yr(2025):Final)
   ON = Select(Area,"ON")
   Retail = Select(ECC,"Retail")
   HFC = Select(Poll,"HFC")
   
-  #
-  # 2041 commented out to match bug in Promula file - Ian 05/21/24
-  #
   
   ReductionInput[years] = [ 
-  # 2022   2023   2024   2025   2026   2027   2028   2029   2030   2031   2032   2033   2034   2035   2036   2037   2038   2039   2040  # 2041
-    -243   -243   -243   -243   -243   -243   -243   -243   -243   -243   -243   -243   -243   -243   -243   -243   -243   -169    -97  #  -22
+  # 2025   2026   2027   2028   2029   2030   2031   2032   2033   2034   2035   2036   2037   2038   2039   2040  # 2041
+    -16    -30    -50    -64    -64    -64    -64    -64    -64    -64    -64    -64    -64    -64    -64    -64    -64    -64    -64    -64    -64    -64    -64    -64    -64    -64
   ]
 
   #
   # Convert from kt CO2e to natural tonnes
   # 
-  @. ReductionInput = ReductionInput * 1000 / PolConv[HFC]
-
+  for year in years
+    ReductionInput[year] = ReductionInput[year]*1000/PolConv[HFC]
+  end
   #
   # Compute coefficienct using exogneous emissions and driver
   #
   for year in years
-    MEPOCX[Retail,HFC,ON,year]=(xMEPol[Retail,HFC,ON,year]+ReductionInput[year])/
+    MEPOCX[Retail,HFC,ON,year] = (xMEPol[Retail,HFC,ON,year]+ReductionInput[year])/
       MEDriverRef[Retail,ON,year]
   end
 
@@ -139,21 +137,21 @@ function ComPolicy(db)
   #
   # Select Sets for Policy
   #
-  ON = Select(Area,"ON")
-  Retail = Select(EC,"Retail")
-  Heat = Select(Enduse,"Heat")
-  Electric = Select(Tech,"Electric")
-  years = collect(Yr(2022):Yr(2022))
+  # ON = Select(Area,"ON")
+  # Retail = Select(EC,"Retail")
+  # Heat = Select(Enduse,"Heat")
+  # Electric = Select(Tech,"Electric")
+  # years = collect(Yr(2022):Yr(2022))
 
-  Expenses[Yr(2022)] = 4.3
+  # Expenses[Yr(2022)] = 4.3
 
   #
   # Allocate Program Costs to each Enduse, Tech, EC, and Area
   #  
-  PInvExo[Heat,Electric,Retail,ON,Yr(2022)] = 
-    PInvExo[Heat,Electric,Retail,ON,Yr(2022)]+
-      Expenses[Yr(2022)]/xInflation[ON,Yr(2018)]
-  WriteDisk(db,"$Input/PInvExo",PInvExo)
+  # PInvExo[Heat,Electric,Retail,ON,Yr(2022)] = 
+  #  PInvExo[Heat,Electric,Retail,ON,Yr(2022)]+
+  #    Expenses[Yr(2022)]/xInflation[ON,Yr(2018)]
+  # WriteDisk(db,"$Input/PInvExo",PInvExo)
 end
 
 function PolicyControl(db)

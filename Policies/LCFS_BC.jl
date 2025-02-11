@@ -58,38 +58,38 @@ Base.@kwdef struct TControl
   Tech::SetArray = ReadDisk(db,"$Input/TechKey")
   TechDS::SetArray = ReadDisk(db,"$Input/TechDS")
   Techs::Vector{Int} = collect(Select(Tech))
-  Fuel::SetArray   = ReadDisk(db,"E2020DB/FuelKey")
-  FuelKey::SetArray     = ReadDisk(db,"E2020DB/FuelKey")  
-  Fuels::Vector{Int}    = collect(Select(Fuel))
+  Fuel::SetArray = ReadDisk(db,"E2020DB/FuelKey")
+  FuelKey::SetArray = ReadDisk(db,"E2020DB/FuelKey")
+  Fuels::Vector{Int} = collect(Select(Fuel))
   Year::SetArray = ReadDisk(db,"E2020DB/YearKey")
   YearDS::SetArray = ReadDisk(db,"E2020DB/YearDS")
   Years::Vector{Int} = collect(Select(Year))
-  
+
   DmFracMin::VariableArray{6} = ReadDisk(db,"$Input/DmFracMin") # Demand Fuel/Tech Fraction Minimum (Btu/Btu) [Enduse,Fuel,Tech,EC,Area,Year]
   xDmFrac::VariableArray{6} = ReadDisk(db,"$Input/xDmFrac") # [Enduse,Fuel,Tech,EC,Area,Year]  'Energy Demands Fuel/Tech Split (Fraction)',
-  
+
   #
   # Scratch Variables
   #
   BDTarget::VariableArray{1} = zeros(Float64,length(Year))
   DmFrXBefore::VariableArray{6} = zeros(Float64,length(Enduse),length(Fuel),length(Tech),length(EC),length(Area),length(Year)) # [Enduse,Fuel,Tech,EC,Area,Year] xDmFrac from Biofuel Before Policy (Btu/Btu)
   ETTarget::VariableArray{1} = zeros(Float64,length(Year))
-  SAFTarget::VariableArray{1} = zeros(Float64,length[Year)) #Policy Sustainable Aviation Fuel Target by volume (Btu/Btu)
+  SAFTarget::VariableArray{1} = zeros(Float64,length(Year)) #Policy Sustainable Aviation Fuel Target by volume (Btu/Btu)
 end
 
 function TPolicy(db)
   data = TControl(; db)
   (; Input) = data
-  (; Area,EC,Enduse,Fuel,Tech,Year) = data
+  (; Area,Areas,EC,ECs,Enduse,Enduses,Fuel,Fuels,Tech,Techs,Year,Years) = data
   (; BDTarget,DmFracMin,DmFrXBefore,ETTarget,SAFTarget) = data
   (; xDmFrac) = data
-  
+
   ETMax = 0.1026
 
   BC = Select(Area,"BC")
   for year in Years, ec in ECs, tech in Techs, fuel in Fuels, enduse in Enduses
     DmFrXBefore[enduse,fuel,tech,ec,BC,year] = xDmFrac[enduse,fuel,tech,ec,BC,year]
-  end  
+  end
 
   #
   # SAFTarget represents the target blending rate of Sustainable Aviation Fuel
@@ -104,7 +104,7 @@ function TPolicy(db)
   years = collect(Yr(2023):Yr(2029))
   for year in years
     SAFTarget[year] =
-      SAFTarget[year-1]+(SAFTarget[Yr(2030)]-SAFTarget[Yr(2022)])/(2030-2022)
+      SAFTarget[year-1] + (SAFTarget[Yr(2030)] - SAFTarget[Yr(2022)]) / (2030 - 2022)
   end
 
   years = collect(Yr(2023):Final)
@@ -115,16 +115,16 @@ function TPolicy(db)
   JetFuel = Select(Fuel,"JetFuel")
   techs = Select(Tech,"PlaneJetFuel")
 
-  for year in years, ec in ecs, tech in techs, enduse in enduses
+  for year in years,ec in ecs,tech in techs,enduse in enduses
     xDmFrac[enduse,Ethanol,tech,ec,BC,year] =
       max((DmFrXBefore[enduse,Ethanol,tech,ec,BC,year]),
-         (((DmFrXBefore[enduse,Ethanol,tech,ec,BC,year]+
-           (DmFrXBefore[enduse,JetFuel,tech,ec,BC,year]))*SAFTarget[year]))) 
+        (((DmFrXBefore[enduse,Ethanol,tech,ec,BC,year] +
+           (DmFrXBefore[enduse,JetFuel,tech,ec,BC,year])) * SAFTarget[year])))
 
-    xDmFrac[enduse,JetFuel,tech,ec,BC,year) =
-      max(0,((DmFrXBefore[enduse,Ethanol,tech,ec,BC,year]+
-             (DmFrXBefore[enduse,JetFuel,tech,ec,BC,year]))-
-                  xDmFrac[enduse,Ethanol,tech,ec,BC,year]))
+    xDmFrac[enduse,JetFuel,tech,ec,BC,year] =
+      max(0,((DmFrXBefore[enduse,Ethanol,tech,ec,BC,year] +
+               (DmFrXBefore[enduse,JetFuel,tech,ec,BC,year])) -
+              xDmFrac[enduse,Ethanol,tech,ec,BC,year]))
 
     DmFracMin[enduse,Ethanol,tech,ec,BC,year] = xDmFrac[enduse,Ethanol,tech,ec,BC,year]
   end
@@ -132,22 +132,22 @@ function TPolicy(db)
   AviationGasoline = Select(Fuel,"AviationGasoline")
   techs = Select(Tech,"PlaneGasoline")
 
-  for year in years, ec in ecs, tech in techs, enduse in enduses
+  for year in years,ec in ecs,tech in techs,enduse in enduses
     xDmFrac[enduse,Ethanol,tech,ec,BC,year] =
       max((DmFrXBefore[enduse,Ethanol,tech,ec,BC,year]),
-         (((DmFrXBefore[enduse,Ethanol,tech,ec,BC,year]+
-           (DmFrXBefore[enduse,AviationGasoline,tech,ec,BC,year]))*SAFTarget[year]))) 
+        (((DmFrXBefore[enduse,Ethanol,tech,ec,BC,year] +
+           (DmFrXBefore[enduse,AviationGasoline,tech,ec,BC,year])) * SAFTarget[year])))
 
-    xDmFrac[enduse,AviationGasoline,tech,ec,BC,year) =
-      max(0,((DmFrXBefore[enduse,Ethanol,tech,ec,BC,year]+
-             (DmFrXBefore[enduse,AviationGasoline,tech,ec,BC,year]))-
-                  xDmFrac[enduse,Ethanol,tech,ec,BC,year]))
+    xDmFrac[enduse,AviationGasoline,tech,ec,BC,year] =
+      max(0,((DmFrXBefore[enduse,Ethanol,tech,ec,BC,year] +
+               (DmFrXBefore[enduse,AviationGasoline,tech,ec,BC,year])) -
+              xDmFrac[enduse,Ethanol,tech,ec,BC,year]))
 
     DmFracMin[enduse,Ethanol,tech,ec,BC,year] = xDmFrac[enduse,Ethanol,tech,ec,BC,year]
   end
 
   # 
-  # ETTarget represents the max blending rate of 15%, which does
+  # ETTarget represents the max blending rate of 15%,which does
   # not meet the 20% improvement relative to 2010 baseline
   #
   # BDTarget represents the blending rate needed to reduce emissions
@@ -161,13 +161,13 @@ function TPolicy(db)
   #  
   ETTarget[Last] = 0.04
   ETTarget[Yr(2030)] = 0.15
-     
+
   years = collect(Future:Yr(2030))
   for year in years
-    ETTarget[year] = 
-      ETTarget[year-1]+(ETTarget[Yr(2030)]-ETTarget[Yr(2020)])/(2030-2020)
+    ETTarget[year] =
+      ETTarget[year-1] + (ETTarget[Yr(2030)] - ETTarget[Yr(2020)]) / (2030 - 2020)
   end
-  
+
   years = collect(Yr(2031):Final)
   for year in years
     ETTarget[year] = ETTarget[Yr(2030)]
@@ -177,17 +177,17 @@ function TPolicy(db)
   BDTarget[Yr(2030)] = 0.238
   years = collect(Future:Yr(2030))
   for year in years
-    BDTarget[year] = 
-      BDTarget[year-1]+(BDTarget[Yr(2030)]-BDTarget[Yr(2020)])/(2030-2020)
+    BDTarget[year] =
+      BDTarget[year-1] + (BDTarget[Yr(2030)] - BDTarget[Yr(2020)]) / (2030 - 2020)
   end
-  
+
   years = collect(Yr(2031):Final)
   for year in years
     BDTarget[year] = BDTarget[Yr(2030)]
   end
 
   # 
-  # Ethanol content target is 15.00% in volume of gasoline, equals 10.26% by energy
+  # Ethanol content target is 15.00% in volume of gasoline,equals 10.26% by energy
   # based on NIR energy content factors
   # 
   years = collect(Future:Final)
@@ -196,27 +196,27 @@ function TPolicy(db)
   Gasoline = Select(Fuel,"Gasoline")
   techs = Select(Tech,["LDVGasoline","LDVHybrid","LDTGasoline","LDTHybrid","Motorcycle",
     "BusGasoline","HDV2B3Gasoline","HDV45Gasoline","HDV67Gasoline","HDV8Gasoline"])
-  enduse = Select(Enduse,"Carriage")              
+  enduse = Select(Enduse,"Carriage")
 
-  ETER = 10.26/15
-  
+  ETER = 10.26 / 15
+
   # 
   # Ethanol goal is the maximum of the Federal goal or an existing (provincial) goal.
   # 
-  for year in years, ec in ecs, tech in techs
-    xDmFrac[enduse,Ethanol,tech,ec,BC,year] = 
+  for year in years,ec in ecs,tech in techs
+    xDmFrac[enduse,Ethanol,tech,ec,BC,year] =
       max(DmFrXBefore[enduse,Ethanol,tech,ec,BC,year],
-        ((DmFrXBefore[enduse,Ethanol,tech,ec,BC,year]+
-          DmFrXBefore[enduse,Gasoline,tech,ec,BC,year])*ETER*ETTarget[year]))
-              
-    xDmFrac[enduse,Ethanol,tech,ec,BC,year] = 
+        ((DmFrXBefore[enduse,Ethanol,tech,ec,BC,year] +
+          DmFrXBefore[enduse,Gasoline,tech,ec,BC,year]) * ETER * ETTarget[year]))
+
+    xDmFrac[enduse,Ethanol,tech,ec,BC,year] =
       min(xDmFrac[enduse,Ethanol,tech,ec,BC,year],ETMax)
-    
-    xDmFrac[enduse,Gasoline,tech,ec,BC,year] = 
-      max(0,((DmFrXBefore[enduse,Ethanol,tech,ec,BC,year]+
-              DmFrXBefore[enduse,Gasoline,tech,ec,BC,year])-
-                  xDmFrac[enduse,Ethanol,tech,ec,BC,year]))
-      
+
+    xDmFrac[enduse,Gasoline,tech,ec,BC,year] =
+      max(0,((DmFrXBefore[enduse,Ethanol,tech,ec,BC,year] +
+               DmFrXBefore[enduse,Gasoline,tech,ec,BC,year]) -
+              xDmFrac[enduse,Ethanol,tech,ec,BC,year]))
+
     DmFracMin[enduse,Ethanol,tech,ec,BC,year] = xDmFrac[enduse,Ethanol,tech,ec,BC,year]
   end
 
@@ -227,25 +227,25 @@ function TPolicy(db)
   Diesel = Select(Fuel,"Diesel")
   Biodiesel = Select(Fuel,"Biodiesel")
   techs = Select(Tech,["LDVDiesel","LDTDiesel","BusDiesel","HDV2B3Diesel",
-                "HDV45Diesel","HDV67Diesel","HDV8Diesel","TrainDiesel"])
-  enduse = Select(Enduse,"Carriage")              
+    "HDV45Diesel","HDV67Diesel","HDV8Diesel","TrainDiesel"])
+  enduse = Select(Enduse,"Carriage")
 
-  BDER = 13.93/15
-  
+  BDER = 13.93 / 15
+
   # 
   # Biodiesel goal is the maximum of the Federal goal or an existing (provincial) goal.
   # 
-  for year in years, ec in ecs, tech in techs
+  for year in years,ec in ecs,tech in techs
     xDmFrac[enduse,Biodiesel,tech,ec,BC,year] =
       max(DmFrXBefore[enduse,Biodiesel,tech,ec,BC,year],
-        ((DmFrXBefore[enduse,Biodiesel,tech,ec,BC,year]+
-          DmFrXBefore[enduse,Diesel,tech,ec,BC,year])*(BDER*BDTarget[year])))
-        
-    xDmFrac[enduse,Diesel,tech,ec,BC,year] = 
-      max(0,((DmFrXBefore[enduse,Biodiesel,tech,ec,BC,year]+
-              DmFrXBefore[enduse,Diesel,tech,ec,BC,year])-
-                  xDmFrac[enduse,Biodiesel,tech,ec,BC,year]))
-      
+        ((DmFrXBefore[enduse,Biodiesel,tech,ec,BC,year] +
+          DmFrXBefore[enduse,Diesel,tech,ec,BC,year]) * (BDER * BDTarget[year])))
+
+    xDmFrac[enduse,Diesel,tech,ec,BC,year] =
+      max(0,((DmFrXBefore[enduse,Biodiesel,tech,ec,BC,year] +
+               DmFrXBefore[enduse,Diesel,tech,ec,BC,year]) -
+              xDmFrac[enduse,Biodiesel,tech,ec,BC,year]))
+
     DmFracMin[enduse,Biodiesel,tech,ec,BC,year] = xDmFrac[enduse,Biodiesel,tech,ec,BC,year]
   end
 
@@ -256,34 +256,34 @@ function TPolicy(db)
   ecs = Select(EC,["AirPassenger","ResidentialOffRoad","CommercialOffRoad"])
   enduse = Select(Enduse,"Carriage")
 
-  for year in years, ec in ecs
-    xDmFrac[enduse,Biodiesel,OffRoad,ec,BC,year] = 
+  for year in years,ec in ecs
+    xDmFrac[enduse,Biodiesel,OffRoad,ec,BC,year] =
       max(DmFrXBefore[enduse,Biodiesel,OffRoad,ec,BC,year],
-        ((DmFrXBefore[enduse,Biodiesel,OffRoad,ec,BC,year]+
-          DmFrXBefore[enduse,Diesel,OffRoad,ec,BC,year])*(BDER*BDTarget[year])))
-        
-    xDmFrac[enduse,Diesel,OffRoad,ec,BC,year] = 
-      max(0,((DmFrXBefore[enduse,Biodiesel,OffRoad,ec,BC,year]+
-              DmFrXBefore[enduse,Diesel,OffRoad,ec,BC,year])-
-                  xDmFrac[enduse,Biodiesel,OffRoad,ec,BC,year]))
-    
-    DmFracMin[enduse,Biodiesel,OffRoad,ec,BC,year] = 
+        ((DmFrXBefore[enduse,Biodiesel,OffRoad,ec,BC,year] +
+          DmFrXBefore[enduse,Diesel,OffRoad,ec,BC,year]) * (BDER * BDTarget[year])))
+
+    xDmFrac[enduse,Diesel,OffRoad,ec,BC,year] =
+      max(0,((DmFrXBefore[enduse,Biodiesel,OffRoad,ec,BC,year] +
+               DmFrXBefore[enduse,Diesel,OffRoad,ec,BC,year]) -
+              xDmFrac[enduse,Biodiesel,OffRoad,ec,BC,year]))
+
+    DmFracMin[enduse,Biodiesel,OffRoad,ec,BC,year] =
       xDmFrac[enduse,Biodiesel,OffRoad,ec,BC,year]
 
-    xDmFrac[enduse,Ethanol,OffRoad,ec,BC,year] = 
+    xDmFrac[enduse,Ethanol,OffRoad,ec,BC,year] =
       max(DmFrXBefore[enduse,Ethanol,OffRoad,ec,BC,year],
-        ((DmFrXBefore[enduse,Ethanol,OffRoad,ec,BC,year]+
-          DmFrXBefore[enduse,Gasoline,OffRoad,ec,BC,year])*ETER*ETTarget[year]))
-    
-    xDmFrac[enduse,Ethanol,OffRoad,ec,BC,year] = 
+        ((DmFrXBefore[enduse,Ethanol,OffRoad,ec,BC,year] +
+          DmFrXBefore[enduse,Gasoline,OffRoad,ec,BC,year]) * ETER * ETTarget[year]))
+
+    xDmFrac[enduse,Ethanol,OffRoad,ec,BC,year] =
       min(xDmFrac[enduse,Ethanol,OffRoad,ec,BC,year],ETMax)
-    
-    xDmFrac[enduse,Gasoline,OffRoad,ec,BC,year] = 
-      max(0,((DmFrXBefore[enduse,Ethanol,OffRoad,ec,BC,year]+
-              DmFrXBefore[enduse,Gasoline,OffRoad,ec,BC,year])-
-                  xDmFrac[enduse,Ethanol,OffRoad,ec,BC,year]))
-    
-    DmFracMin[enduse,Ethanol,OffRoad,ec,BC,year] = 
+
+    xDmFrac[enduse,Gasoline,OffRoad,ec,BC,year] =
+      max(0,((DmFrXBefore[enduse,Ethanol,OffRoad,ec,BC,year] +
+               DmFrXBefore[enduse,Gasoline,OffRoad,ec,BC,year]) -
+              xDmFrac[enduse,Ethanol,OffRoad,ec,BC,year]))
+
+    DmFracMin[enduse,Ethanol,OffRoad,ec,BC,year] =
       xDmFrac[enduse,Ethanol,OffRoad,ec,BC,year]
   end
 

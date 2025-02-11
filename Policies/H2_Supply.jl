@@ -61,8 +61,8 @@ function SupplyPolicy(db)
   #
   # Options in the Forecast
   #  
-  h2techs = Select(H2Tech,["Grid","OnshoreWind","SolarPV"])
   years = collect(Future:Final)
+  h2techs = Select(H2Tech,["Grid","OnshoreWind","SolarPV"])
   for year in years, area in Areas, h2tech in h2techs
     H2MSM0[h2tech,area,year] = 0.0
   end
@@ -70,17 +70,30 @@ function SupplyPolicy(db)
   #
   # Only Ontario has significant need for Interruptible power
   #  
-  ON = Select(Area,"ON")
-  Interruptible = Select(H2Tech,"Interruptible")
+  areas = Select(Area,"ON")
+  h2techs = Select(H2Tech,["Interruptible","NG","NGCCS","ATRNGCCS"])
   years = collect(Future:Final)
-  for year in years
-    H2MSM0[Interruptible,ON,year] = -1.0
+  for year in years, area in areas, h2tech in h2techs
+    H2MSM0[h2tech,area,year] = -170.0
+  end
+  h2techs = Select(H2Tech,"SMNR")
+  for year in years, area in areas, h2tech in h2techs
+     H2MSM0[h2tech,area,year] = -100.0
+  end
+  h2techs = Select(H2Tech,["Grid","OnshoreWind","SolarPV"])
+  for year in years, area in areas, h2tech in h2techs
+    H2MSM0[h2tech,area,year] = 0.0
   end
 
   #
   # NG CCS units only expected in AB and SK
   #  
   areas = Select(Area,["AB","SK"])
+  h2techs = Select(H2Tech,["NG","SMNR","Interruptible"])
+  years = collect(Future:Final)
+  for year in years, area in areas, h2tech in h2techs
+    H2MSM0[h2tech,area,year] = -170.0
+  end
   h2techs = Select(H2Tech,["Grid","OnshoreWind","SolarPV"])
   years = collect(Future:Final)
   for year in years, area in areas, h2tech in h2techs
@@ -100,66 +113,97 @@ function SupplyPolicy(db)
   #
   # Biomass Gasification only in BC and QC
   #  
-  areas = Select(Area,["BC","QC"])
+  areas = Select(Area,["BC","QC","YT","NT"])
   h2techs = Select(H2Tech,["Grid","OnshoreWind","SolarPV"])
   years = collect(Future:Final)
   for year in years, area in areas, h2tech in h2techs
     H2MSM0[h2tech,area,year] = 0.0
   end
   
-  h2techs = Select(H2Tech,["Biomass","BiomassCCS"])
+  h2techs = Select(H2Tech,["Biomass","BiomassCCS","Interruptible"])
   for year in years, area in areas, h2tech in h2techs
-    H2MSM0[h2tech,area,year] = -1.0
+    H2MSM0[h2tech,area,year] = -170.0
+  end
+  #
+  areas = Select(Area,["QC","YT","NT"])
+  h2techs = Select(H2Tech,["ATRNGCCS","NGCCS","SMNR","Interruptible"])
+  for year in years, area in areas, h2tech in h2techs
+    H2MSM0[h2tech,area,year] = -170
+  end
+
+  areas = Select(Area,"BC")
+  h2techs = Select(H2Tech,["ATRNGCCS","NGCCS"])
+  years = collect(Future:Final)
+  for year in years, area in areas, h2tech in h2techs
+    H2MSM0[h2tech,area,year] = -50
+  end
+
+  areas = Select(Area,"BC")
+  h2techs = Select(H2Tech,"SMNR")
+  years = collect(Future:Final)
+  for year in years, area in areas, h2tech in h2techs
+    H2MSM0[h2tech,area,year] = -100.0
   end
 
   #
   # NU: Temp fix to remove H2 production in Ref22
   #  
-  NU = Select(Area,"NU")
-  for year in years, h2tech in H2Techs
-    H2MSM0[h2tech,NU,year] = -170.0
+  areas = Select(Area,"NU")
+  for year in years, area in areas, h2tech in H2Techs
+    H2MSM0[h2tech,area,year] = -170.0
   end
 
-  #
   areas = Select(Area,["NS","NB","PE"])
-  h2techs = Select(H2Tech,["ATRNGCCS","NGCCS"])
+  h2techs = Select(H2Tech,["ATRNGCCS","NGCCS","NG","SMNR"])
   years = collect(Future:Final)
   for year in years, area in areas, h2tech in h2techs
-    H2MSM0[h2tech,area,year] = -10.0
+    H2MSM0[h2tech,area,year] = -170.0
   end
-  
   h2techs = Select(H2Tech,["Grid","SolarPV"])
   for year in years, area in areas, h2tech in h2techs
     H2MSM0[h2tech,area,year] = -10.0
   end
-  
-  OnshoreWind = Select(H2Tech,"OnshoreWind")
+  h2techs = Select(H2Tech,"OnshoreWind")
   for year in years, area in areas, h2tech in h2techs
-    H2MSM0[OnshoreWind,area,year] = 0.0
+    H2MSM0[h2tech,area,year] = 0.0
   end
   
   #
-  NL = Select(Area,"NL")
-  h2techs = Select(H2Tech,["ATRNGCCS","NGCCS"])
-  for year in years, h2tech in h2techs
-    H2MSM0[h2tech,NL,year] = -170.0
+  areas = Select(Area,"NL")
+  h2techs = Select(H2Tech,["ATRNGCCS","NGCCS","NG","SMNR","Interruptible"])
+  for year in years, area in areas, h2tech in h2techs
+    H2MSM0[h2tech,area,year] = -170.0
+  end
+  h2techs = Select(H2Tech,["Grid","SolarPV"])
+  for year in years, area in areas, h2tech in h2techs
+    H2MSM0[h2tech,area,year] = -170.0
+  end
+  h2techs = Select(H2Tech,"OnshoreWind")
+  for year in years, area in areas, h2tech in h2techs
+    H2MSM0[h2tech,area,year] = 0.0
   end
 
-  h2techs = Select(H2Tech,["Grid","SolarPV"])
-  for year in years, h2tech in h2techs
-    H2MSM0[h2tech,NL,year] = -170.0
-  end
-  
+  areas = Select(Area,"MB")
+  h2techs = Select(H2Tech,["ATRNGCCS","NGCCS","NG","SMNR","Interruptible"])
   for year in years, area in areas, h2tech in h2techs
-    H2MSM0[OnshoreWind,NL,year] = 0.0
+    H2MSM0[h2tech,area,year] = -170.0
   end
-  
+  h2techs = Select(H2Tech,["OnshoreWind","SolarPV"])
+  for year in years, area in areas, h2tech in h2techs
+    H2MSM0[h2tech,area,year] = -100.0
+  end
+  h2techs = Select(H2Tech,"Grid")
+  for year in years, area in areas, h2tech in h2techs
+    H2MSM0[h2tech,area,year] = 0.0
+  end
   #
   WriteDisk(db,"SpInput/H2MSM0",H2MSM0)
 
   #
-  # Since all these are new facilities, remove all the
-  # retirements by having a lifetime of 0 - Jeff Amlin 08/11/22
+  # Place code in this file until Hydrogen.txt is recompiled - Jeff Amlin 08/11/22
+  #
+  # Since all these are new facilities, remove all the retirements by having
+  # a lifetime of 0 - Jeff Amlin 08/11/22
   #
   for year in Years, h2tech in H2Techs  
     H2PL[h2tech,year] = 0
