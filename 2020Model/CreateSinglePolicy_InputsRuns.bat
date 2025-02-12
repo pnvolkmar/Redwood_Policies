@@ -36,23 +36,30 @@ rem success
   rem Call CreateSinglePolicy_Inputs Electricity_Patch          jl Policies StartBase Base Base OGRef Base
   rem Call CreateSinglePolicy_Inputs EndogenousElectricCapacity jl Policies StartBase Base Base OGRef Base
   rem Call CreateSinglePolicy_Inputs Electricity_ITCs           jl Policies StartBase Base Base OGRef Base
+  rem Call CreateSinglePolicy_Inputs Retro_Device_Com_Elec  jl Policies StartBase Base Base OGRef Base
+  rem Call CreateSinglePolicy_Inputs Retro_Device_Com_NG    jl Policies StartBase Base Base OGRef Base
+  rem Call CreateSinglePolicy_Inputs Retro_Device_Res_Elec  jl Policies StartBase Base Base OGRef Base
+  rem Call CreateSinglePolicy_Inputs Retro_Device_Res_NG    jl Policies StartBase Base Base OGRef Base
+  rem Call CreateSinglePolicy_Inputs Retro_Process_Com_Elec jl Policies StartBase Base Base OGRef Base
+  rem Call CreateSinglePolicy_Inputs Retro_Process_Com_NG   jl Policies StartBase Base Base OGRef Base
+  rem Call CreateSinglePolicy_Inputs Retro_Process_Res_Elec jl Policies StartBase Base Base OGRef Base
+  rem Call CreateSinglePolicy_Inputs Retro_Process_Res_NG   jl Policies StartBase Base Base OGRef Base
+  rem Call CreateSinglePolicy_Inputs RNG_H2_Pipeline_CA     jl Policies StartBase Base Base OGRef Base
+  rem Call CreateSinglePolicy_Inputs RNG_Standard_BC        jl Policies StartBase Base Base OGRef Base
+  rem Call CreateSinglePolicy_Inputs RNG_Standard_QC        jl Policies StartBase Base Base OGRef Base
+  rem Call CreateSinglePolicy_Inputs Res_PeakSavings        jl Policies StartBase Base Base OGRef Base
+    rem Call CreateSinglePolicy_Inputs Ind_PeakSavings           jl Policies StartBase Base Base OGRef Base
+    rem Call CreateSinglePolicy_Inputs Trans_MarineOffRoad_CA    jl Policies StartBase Base Base OGRef Base
+    rem Call CreateSinglePolicy_Inputs Trans_MS_Bus_Train        jl Policies StartBase Base Base OGRef Base
+    rem Call CreateSinglePolicy_Inputs Trans_MS_Conversions_CA   jl Policies StartBase Base Base OGRef Base
+    rem Call CreateSinglePolicy_Inputs Trans_MS_iMHZEV           jl Policies StartBase Base Base OGRef Base
+    rem Call CreateSinglePolicy_Inputs Trans_MS_HDV_CA           jl Policies StartBase Base Base OGRef Base
 
 rem unknown
-
-  Call CreateSinglePolicy_Inputs Retro_Device_Com_Elec  jl Policies StartBase Base Base OGRef Base
-  Call CreateSinglePolicy_Inputs Retro_Device_Com_NG    jl Policies StartBase Base Base OGRef Base
-  Call CreateSinglePolicy_Inputs Retro_Device_Res_Elec  jl Policies StartBase Base Base OGRef Base
-  Call CreateSinglePolicy_Inputs Retro_Device_Res_NG    jl Policies StartBase Base Base OGRef Base
-  Call CreateSinglePolicy_Inputs Retro_Process_Com_Elec jl Policies StartBase Base Base OGRef Base
-  Call CreateSinglePolicy_Inputs Retro_Process_Com_NG   jl Policies StartBase Base Base OGRef Base
-  Call CreateSinglePolicy_Inputs Retro_Process_Res_Elec jl Policies StartBase Base Base OGRef Base
-  Call CreateSinglePolicy_Inputs Retro_Process_Res_NG   jl Policies StartBase Base Base OGRef Base
-  Call CreateSinglePolicy_Inputs RNG_H2_Pipeline_CA     jl Policies StartBase Base Base OGRef Base
-  Call CreateSinglePolicy_Inputs RNG_Standard_BC        jl Policies StartBase Base Base OGRef Base
-  Call CreateSinglePolicy_Inputs RNG_Standard_QC        jl Policies StartBase Base Base OGRef Base
-  Call CreateSinglePolicy_Inputs Res_PeakSavings        jl Policies StartBase Base Base OGRef Base
-  Call CreateSinglePolicy_Inputs Ind_PeakSavings        jl Policies StartBase Base Base OGRef Base
-
+rem Group:  Ind_CleanBC_Cmnt.jl, Ind_PeakSavings.jl, Trans_BiofuelEmissions_CA.jl, Trans_MarineOffRoad_CA.jl, Trans_MS_Bus_Train.jl, Trans_MS_Conversions_CA.jl, Trans_MS_HDV_CA.jl, Trans_MS_iMHZEV.jl,    
+    rem Call CreateSinglePolicy_Inputs Trans_BiofuelEmissions_CA jl Policies StartBase Base Base OGRef Base
+    rem Call CreateSinglePolicy_Inputs Ind_CleanBC_Cmnt          jl Policies StartBase Base Base OGRef Base
+rem rerun
 
 rem failing     
    

@@ -182,13 +182,14 @@ function TransPolicy(db)
   end
   
   HDV8Electric = Select(Tech,"HDV8Electric");
+  HDV8FuelCell = Select(Tech,"HDV8FuelCell");
   techs = Select(Tech,["HDV8Electric","HDV8FuelCell"]);
   for area in areas, year in years, tech in techs
     MSFTarget[tech,area,year] = ZEVInput[tech,area,year]*
       TTMSOld[area,year]
   end
   for area in areas, year in years
-    TTMSNew[area,year] = TTMSOld[area,year]-MSFTarget[HDV8Electric,area,year]
+    TTMSNew[area,year] = TTMSOld[area,year]-MSFTarget[HDV8Electric,area,year]-MSFTarget[HDV8FuelCell,area,year]
     @finite_math TTMSChange[area,year] = TTMSNew[area,year] / TTMSOld[area,year]
   end
   
