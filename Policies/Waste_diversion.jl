@@ -1,15 +1,11 @@
 #
 # Waste_diversion.jl
-#
-# Diversion values from the "Policies" tab of the "rates_2021" excel,and the 2021 Waste 
-# Sector Policies word document. This version was last updated in Jan 2022.
-# Diversion targets are provincial averages based on bulk waste quantities or 
-# organic waste diversion targets
-# Diversion rate values are a linear relationship between last historical year's diversion 
-# value and a provinces announced diversion target.
+# Diversion values from the "Policy Summary" tab of the "Waste Diversion Notes" excel, and the List of Ref24 Policies SharePoint list. This version was last updated in Aug. 2024. 
+# Diversion targets are provincial averages based on bulk waste quantities or organic waste diversion targets
+# Diversion rate values are a linear relationship between last historical year's diversion value and a provinces announced diversion target.
 #
 ########################
-#  MODEL VARIABLE            VDATA VARIABLE
+#  MODEL VARIABLE    VDATA VARIABLE
 #  ProportionDivertedWaste = vDiversionRate
 ########################
 #
@@ -62,111 +58,85 @@ function MacroPolicy(db)
   NB = Select(Area,"NB") 
   NS = Select(Area,"NS")
   NL = Select(Area,"NL")
+  YT = Select(Area,"YT")
   
-  years = collect(Yr(2021):Yr(2030))
+  years = collect(Yr(2023):Yr(2050))
   
   #
   # assign standard diversion rates to all non-wood waste
   #  
   AshDry = Select(Waste,"AshDry")
-  #                                 2021 2022 2023 2024 2025 2026 2027 2028 2029 2030
-  DiversionRate[AshDry,BC,years] = [0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40] 
-  DiversionRate[AshDry,AB,years] = [0.18 0.18 0.18 0.18 0.18 0.18 0.18 0.18 0.18 0.18]
-  DiversionRate[AshDry,SK,years] = [0.21 0.23 0.25 0.26 0.28 0.29 0.31 0.32 0.34 0.35]
-  DiversionRate[AshDry,MB,years] = [0.21 0.21 0.21 0.21 0.21 0.21 0.21 0.21 0.21 0.21]
-  DiversionRate[AshDry,ON,years] = [0.28 0.29 0.31 0.33 0.34 0.37 0.40 0.44 0.47 0.50]
-  DiversionRate[AshDry,QC,years] = [0.31 0.38 0.44 0.44 0.44 0.44 0.44 0.44 0.44 0.44]
-  DiversionRate[AshDry,NB,years] = [0.24 0.24 0.24 0.24 0.24 0.24 0.24 0.24 0.24 0.24]
-  DiversionRate[AshDry,NS,years] = [0.45 0.45 0.45 0.45 0.45 0.45 0.45 0.45 0.45 0.45]
-  DiversionRate[AshDry,NL,years] = [0.23 0.30 0.37 0.43 0.50 0.50 0.50 0.50 0.50 0.50]  
+  #                                 2023 2024 2025 2026 2027 2028 2029 2030 2031 2032 2033 2034 2035 2036 2037 2038 2039 2040 2041 2042 2043 2044 2045 2046 2047 2048 2049 2050
+  DiversionRate[AshDry,ON,years] = [0.28 0.31 0.34 0.38 0.41 0.44 0.47 0.50 0.52 0.53 0.55 0.56 0.58 0.59 0.61 0.62 0.64 0.65 0.67 0.68 0.70 0.71 0.73 0.74 0.76 0.77 0.79 0.80]
+  DiversionRate[AshDry,NL,years] = [0.24 0.37 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50]
+  DiversionRate[AshDry,YT,years] = [0.29 0.34 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40]
 
   waste1 = Select(Waste,!=("WoodWastePulpPaper"))
   waste2 = Select(Waste,!=("WoodWasteSolidWood"))
   wastes = intersect(waste1,waste2)
   
-  areas = Select(Area,["BC","AB","SK","MB","ON","QC","NB","NS","NL"])
-  for waste in wastes, area in areas, year in years
-    ProportionDivertedWaste[waste,area,year] = DiversionRate[AshDry,area,year]
+  areas = Select(Area,["ON","NL","YT"])
+  for year in years, area in areas, waste in wastes
+  ProportionDivertedWaste[waste,area,year] = DiversionRate[AshDry,area,year]
   end
 
   #
   # Assign Organic diversion rates
   #
-  
+  areas = Select(Area,["BC","ON","QC","NL","MB","YT"])
+  years = collect(Yr(2023):Yr(2050))  
   #
   # Food Dry
-  #   
+  # 
   FoodDry = Select(Waste,"FoodDry")
-  #                                  2021 2022 2023 2024 2025 2026 2027 2028 2029 2030
-  DiversionRate[FoodDry,BC,years] = [0.64 0.68 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76]
-  DiversionRate[FoodDry,AB,years] = [0.18 0.18 0.18 0.18 0.18 0.18 0.18 0.18 0.18 0.18]
-  DiversionRate[FoodDry,SK,years] = [0.22 0.24 0.26 0.27 0.29 0.31 0.33 0.34 0.36 0.38]
-  DiversionRate[FoodDry,MB,years] = [0.43 0.55 0.67 0.79 0.79 0.79 0.79 0.79 0.79 0.79]
-  DiversionRate[FoodDry,ON,years] = [0.37 0.42 0.48 0.54 0.60 0.60 0.60 0.60 0.60 0.60]
-  DiversionRate[FoodDry,QC,years] = [0.40 0.43 0.47 0.50 0.53 0.57 0.60 0.63 0.67 0.70]
-  DiversionRate[FoodDry,NB,years] = [0.24 0.24 0.24 0.24 0.24 0.24 0.24 0.24 0.24 0.24]
-  DiversionRate[FoodDry,NS,years] = [0.45 0.45 0.45 0.45 0.45 0.45 0.45 0.45 0.45 0.45]
-  DiversionRate[FoodDry,NL,years] = [0.23 0.30 0.37 0.43 0.50 0.50 0.50 0.50 0.50 0.50]
+  #                                  2023 2024 2025 2026 2027 2028 2029 2030 2031 2032 2033 2034 2035 2036 2037 2038 2039 2040 2041 2042 2043 2044 2045 2046 2047 2048 2049 2050
+  DiversionRate[FoodDry,BC,years] = [0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76]
+  DiversionRate[FoodDry,ON,years] = [0.37 0.48 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60]
+  DiversionRate[FoodDry,QC,years] = [0.36 0.41 0.46 0.51 0.55 0.60 0.65 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70]
+  DiversionRate[FoodDry,NL,years] = [0.24 0.37 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50]
+  DiversionRate[FoodDry,MB,years] = [0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64]
+  DiversionRate[FoodDry,YT,years] = [0.29 0.34 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40]
 
   #
   # Food Wet
   #  
   FoodWet = Select(Waste,"FoodWet")
-  #                                  2021 2022 2023 2024 2025 2026 2027 2028 2029 2030    
-  DiversionRate[FoodWet,BC,years] = [0.64 0.68 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76]
-  DiversionRate[FoodWet,AB,years] = [0.18 0.18 0.18 0.18 0.18 0.18 0.18 0.18 0.18 0.18]
-  DiversionRate[FoodWet,SK,years] = [0.22 0.24 0.26 0.27 0.29 0.31 0.33 0.34 0.36 0.38]
-  DiversionRate[FoodWet,MB,years] = [0.43 0.55 0.67 0.79 0.79 0.79 0.79 0.79 0.79 0.79]
-  DiversionRate[FoodWet,ON,years] = [0.37 0.42 0.48 0.54 0.60 0.60 0.60 0.60 0.60 0.60]
-  DiversionRate[FoodWet,QC,years] = [0.40 0.43 0.47 0.50 0.53 0.57 0.60 0.63 0.67 0.70]
-  DiversionRate[FoodWet,NB,years] = [0.24 0.24 0.24 0.24 0.24 0.24 0.24 0.24 0.24 0.24]
-  DiversionRate[FoodWet,NS,years] = [0.45 0.45 0.45 0.45 0.45 0.45 0.45 0.45 0.45 0.45]
-  DiversionRate[FoodWet,NL,years] = [0.23 0.30 0.37 0.43 0.50 0.50 0.50 0.50 0.50 0.50]
+  #                                  2023 2024 2025 2026 2027 2028 2029 2030 2031 2032 2033 2034 2035 2036 2037 2038 2039 2040 2041 2042 2043 2044 2045 2046 2047 2048 2049 2050
+  DiversionRate[FoodWet,BC,years] = [0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76]
+  DiversionRate[FoodWet,ON,years] = [0.37 0.48 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60]
+  DiversionRate[FoodWet,QC,years] = [0.36 0.41 0.46 0.51 0.55 0.60 0.65 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70]
+  DiversionRate[FoodWet,NL,years] = [0.24 0.37 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50]
+  DiversionRate[FoodWet,MB,years] = [0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64]
+  DiversionRate[FoodWet,YT,years] = [0.29 0.34 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40]
 
   #
   # Yard And Garden Dry
   #  
-  waste = Select(Waste,"YardAndGardenDry")
-  DiversionRate[waste,BC,years] = [0.64 0.68 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76]
-  DiversionRate[waste,AB,years] = [0.18 0.18 0.18 0.18 0.18 0.18 0.18 0.18 0.18 0.18]
-  DiversionRate[waste,SK,years] = [0.22 0.24 0.26 0.27 0.29 0.31 0.33 0.34 0.36 0.38]
-  DiversionRate[waste,MB,years] = [0.43 0.55 0.67 0.79 0.79 0.79 0.79 0.79 0.79 0.79]
-  DiversionRate[waste,ON,years] = [0.37 0.42 0.48 0.54 0.60 0.60 0.60 0.60 0.60 0.60]
-  DiversionRate[waste,QC,years] = [0.40 0.43 0.47 0.50 0.53 0.57 0.60 0.63 0.67 0.70]
-  DiversionRate[waste,NB,years] = [0.24 0.24 0.24 0.24 0.24 0.24 0.24 0.24 0.24 0.24]
-  DiversionRate[waste,NS,years] = [0.45 0.45 0.45 0.45 0.45 0.45 0.45 0.45 0.45 0.45]
-  DiversionRate[waste,NL,years] = [0.23 0.30 0.37 0.43 0.50 0.50 0.50 0.50 0.50 0.50]
+  YardGardenDry = Select(Waste,"YardAndGardenDry")
+  #                                        2023 2024 2025 2026 2027 2028 2029 2030 2031 2032 2033 2034 2035 2036 2037 2038 2039 2040 2041 2042 2043 2044 2045 2046 2047 2048 2049 2050
+  DiversionRate[YardGardenDry,BC,years] = [0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76]
+  DiversionRate[YardGardenDry,ON,years] = [0.37 0.48 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60]
+  DiversionRate[YardGardenDry,QC,years] = [0.36 0.41 0.46 0.51 0.55 0.60 0.65 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70]
+  DiversionRate[YardGardenDry,NL,years] = [0.24 0.27 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50]
+  DiversionRate[YardGardenDry,MB,years] = [0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64]
+  DiversionRate[YardGardenDry,YT,years] = [0.29 0.34 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40]
 
   #
   # Yard And Garden Wet
   # 
-  waste = Select(Waste,"YardAndGardenWet")
-  DiversionRate[waste,BC,years] = [0.64 0.68 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76]
-  DiversionRate[waste,AB,years] = [0.18 0.18 0.18 0.18 0.18 0.18 0.18 0.18 0.18 0.18]
-  DiversionRate[waste,SK,years] = [0.22 0.24 0.26 0.27 0.29 0.31 0.33 0.34 0.36 0.38]
-  DiversionRate[waste,MB,years] = [0.43 0.55 0.67 0.79 0.79 0.79 0.79 0.79 0.79 0.79]
-  DiversionRate[waste,ON,years] = [0.37 0.42 0.48 0.54 0.60 0.60 0.60 0.60 0.60 0.60]
-  DiversionRate[waste,QC,years] = [0.40 0.43 0.47 0.50 0.53 0.57 0.60 0.63 0.67 0.70]
-  DiversionRate[waste,NB,years] = [0.24 0.24 0.24 0.24 0.24 0.24 0.24 0.24 0.24 0.24]
-  DiversionRate[waste,NS,years] = [0.45 0.45 0.45 0.45 0.45 0.45 0.45 0.45 0.45 0.45]
-  DiversionRate[waste,NL,years] = [0.23 0.30 0.37 0.43 0.50 0.50 0.50 0.50 0.50 0.50]
+  YardGardenWet = Select(Waste,"YardAndGardenWet")
+  #                                        2023 2024 2025 2026 2027 2028 2029 2030 2031 2032 2033 2034 2035 2036 2037 2038 2039 2040 2041 2042 2043 2044 2045 2046 2047 2048 2049 2050
+  DiversionRate[YardGardenWet,BC,years] = [0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76 0.76]
+  DiversionRate[YardGardenWet,ON,years] = [0.37 0.48 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60 0.60]
+  DiversionRate[YardGardenWet,QC,years] = [0.36 0.41 0.46 0.51 0.55 0.60 0.65 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70 0.70]
+  DiversionRate[YardGardenWet,NL,years] = [0.24 0.27 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50]
+  DiversionRate[YardGardenWet,MB,years] = [0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64 0.64]
+  DiversionRate[YardGardenWet,YT,years] = [0.29 0.34 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40 0.40]
 
   wastes = Select(Waste,["FoodDry","FoodWet","YardAndGardenDry","YardAndGardenWet"])
-  areas = Select(Area,["BC","AB","SK","MB","ON","QC","NB","NS","NL"])
+  areas = Select(Area,["BC","ON","QC","NL","MB","YT"])
   for waste in wastes, area in areas, year in years
-    ProportionDivertedWaste[waste,area,year] = DiversionRate[waste,area,year]      
-  end
-
-  #
-  # Assume post-2030 diversion is constant
-  #  
-  waste1 = Select(Waste,!=("WoodWastePulpPaper"))
-  waste2 = Select(Waste,!=("WoodWasteSolidWood"))
-  wastes = intersect(waste1,waste2)     
-  areas = Select(Area,["BC","AB","SK","MB","ON","QC","NB","NS","NL"])
-  years = collect(Yr(2031):Final)
-  for waste in wastes, area in areas, year in years
-    ProportionDivertedWaste[waste,area,year] = ProportionDivertedWaste[waste,area,Yr(2030)]
+    ProportionDivertedWaste[waste,area,year] = DiversionRate[waste,area,year]  
   end
 
   WriteDisk(db,"MInput/ProportionDivertedWaste",ProportionDivertedWaste)

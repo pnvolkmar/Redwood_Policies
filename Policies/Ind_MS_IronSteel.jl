@@ -4,7 +4,7 @@
 # Net-Zero Accelerator (NZA) Algoma Steel + Arcelor-Mittal reductions are -7.2 Mt
 # in 2030 via Natural Gas DRI-EAF (RW 09.24.2021)
 # Edited by RST 01Aug2022, re-tuning for Ref22
-# Edited by NC 07Sep2023, re-tuning for Ref23
+# Edited by NC 07Sep2023, re-tuning for Ref24
 #
 
 using SmallModel
@@ -82,8 +82,7 @@ function IndPolicy(db)
   (; CalDB,Input) = data    
   (; Area,CTech,CTechs,EC) = data 
   (; Enduse,Enduses,Fuel,FuelEP) = data
-  (; Polls) = data
-  (; Tech) = data
+  (; Poll,Polls,Tech,Techs,Year,Years) = data
   (; CFraction,CMSM0,CnvrtEU,Endogenous) = data
   (; FsFracMin,FsFracMax,FsPOCX,PEMM,POCX) = data
   (; xFsFrac,xMMSF) = data
@@ -91,7 +90,6 @@ function IndPolicy(db)
   ON = Select(Area,"ON")
   IronSteel = Select(EC,"IronSteel")
   enduses = Select(Enduse,["Heat","OthSub"])
-  years = collect(Yr(2025):Yr(2030))
   Electric = Select(Tech,"Electric")
   Gas = Select(Tech,"Gas")
   Coal = Select(Tech,"Coal")
@@ -99,20 +97,35 @@ function IndPolicy(db)
   #
   # Specify values for desired fuel shares (xMMSF)
   # 
+  for enduse in enduses
+    xMMSF[enduse,Electric,IronSteel,ON,Yr(2025)] = 0.10
+    xMMSF[enduse,Gas,IronSteel,ON,Yr(2025)] = 0.80
+    xMMSF[enduse,Coal,IronSteel,ON,Yr(2025)] = 0.1
+  end
+  years = collect(Yr(2026):Yr(2027))
   for year in years, enduse in enduses
-    xMMSF[enduse,Electric,IronSteel,ON,year] = 1.0
-    xMMSF[enduse,Gas,IronSteel,ON,year] = 0
-    xMMSF[enduse,Coal,IronSteel,ON,year] = 0
+    xMMSF[enduse,Electric,IronSteel,ON,year] = 0.03
+    xMMSF[enduse,Gas,IronSteel,ON,year] = 0.87
+    xMMSF[enduse,Coal,IronSteel,ON,year] = 0.1
+  end
+  for enduse in enduses
+    xMMSF[enduse,Electric,IronSteel,ON,Yr(2028)] = 0.65
+    xMMSF[enduse,Gas,IronSteel,ON,Yr(2028)] = 0.25
+    xMMSF[enduse,Coal,IronSteel,ON,Yr(2028)] = 0.10
+
+    xMMSF[enduse,Electric,IronSteel,ON,Yr(2029)] = 1.00
+    xMMSF[enduse,Gas,IronSteel,ON,Yr(2029)] = 0.00
+    xMMSF[enduse,Coal,IronSteel,ON,Yr(2029)] = 0.00
   end
 
   #
   # Hold marginal fuel share at 2030 average values per e-mail from Robin
   # Ian 11/09/21
   #  
-  years = collect(Yr(2031):Yr(2050));
+  years = collect(Yr(2030):Yr(2050));
   for year in years, enduse in enduses
-    xMMSF[enduse,Electric,IronSteel,ON,year] = 0.3
-    xMMSF[enduse,Gas,IronSteel,ON,year] = 0.6
+    xMMSF[enduse,Electric,IronSteel,ON,year] = 0.10
+    xMMSF[enduse,Gas,IronSteel,ON,year] = 0.80
     xMMSF[enduse,Coal,IronSteel,ON,year] = 0.1
   end
 
@@ -132,59 +145,28 @@ function IndPolicy(db)
   Coke = Select(Fuel,"Coke");
   NaturalGas = Select(Fuel,"NaturalGas");
 
-  xFsFrac[Coke,Coal,IronSteel,ON,Yr(2025)] = 0.91
-  xFsFrac[Coke,Coal,IronSteel,ON,Yr(2026)] = 0.980
-  xFsFrac[Coke,Coal,IronSteel,ON,Yr(2027)] = 0.973
-  xFsFrac[Coke,Coal,IronSteel,ON,Yr(2028)] = 0.916
-  xFsFrac[Coke,Coal,IronSteel,ON,Yr(2029)] = 0.853
-  xFsFrac[Coke,Coal,IronSteel,ON,Yr(2030)] = 0.624
-  xFsFrac[Coke,Coal,IronSteel,ON,Yr(2031)] = 0.617
-  xFsFrac[Coke,Coal,IronSteel,ON,Yr(2032)] = 0.611
-  xFsFrac[Coke,Coal,IronSteel,ON,Yr(2033)] = 0.603
-  xFsFrac[Coke,Coal,IronSteel,ON,Yr(2034)] = 0.601
-  xFsFrac[Coke,Coal,IronSteel,ON,Yr(2035)] = 0.599
-  xFsFrac[Coke,Coal,IronSteel,ON,Yr(2036)] = 0.205
-  xFsFrac[Coke,Coal,IronSteel,ON,Yr(2037)] = 0.198
-  xFsFrac[Coke,Coal,IronSteel,ON,Yr(2038)] = 0.192
-  xFsFrac[Coke,Coal,IronSteel,ON,Yr(2039)] = 0.187
-  xFsFrac[Coke,Coal,IronSteel,ON,Yr(2040)] = 0.183
-  xFsFrac[Coke,Coal,IronSteel,ON,Yr(2041)] = 0.177
-  xFsFrac[Coke,Coal,IronSteel,ON,Yr(2042)] = 0.172
-  xFsFrac[Coke,Coal,IronSteel,ON,Yr(2043)] = 0.167
-  xFsFrac[Coke,Coal,IronSteel,ON,Yr(2044)] = 0.162
-  xFsFrac[Coke,Coal,IronSteel,ON,Yr(2045)] = 0.157
-  xFsFrac[Coke,Coal,IronSteel,ON,Yr(2046)] = 0.152
-  xFsFrac[Coke,Coal,IronSteel,ON,Yr(2047)] = 0.146
-  xFsFrac[Coke,Coal,IronSteel,ON,Yr(2048)] = 0.139
-  xFsFrac[Coke,Coal,IronSteel,ON,Yr(2049)] = 0.132
-  xFsFrac[Coke,Coal,IronSteel,ON,Yr(2050)] = 0.126
+  xFsFrac[Coke,Coal,IronSteel,ON,Yr(2025)] = 0.862
+  xFsFrac[Coke,Coal,IronSteel,ON,Yr(2026)] = 0.862
+  xFsFrac[Coke,Coal,IronSteel,ON,Yr(2027)] = 0.862
+  xFsFrac[Coke,Coal,IronSteel,ON,Yr(2028)] = 0.499
+  xFsFrac[Coke,Coal,IronSteel,ON,Yr(2029)] = 0.103
+  xFsFrac[Coke,Coal,IronSteel,ON,Yr(2030)] = 0.103
 
-  xFsFrac[NaturalGas,Coal,IronSteel,ON,Yr(2025)] = 0.036
-  xFsFrac[NaturalGas,Coal,IronSteel,ON,Yr(2026)] = 0.008
-  xFsFrac[NaturalGas,Coal,IronSteel,ON,Yr(2027)] = 0.0108
-  xFsFrac[NaturalGas,Coal,IronSteel,ON,Yr(2028)] = 0.0336
-  xFsFrac[NaturalGas,Coal,IronSteel,ON,Yr(2029)] = 0.0588
-  xFsFrac[NaturalGas,Coal,IronSteel,ON,Yr(2030)] = 0.1504
-  xFsFrac[NaturalGas,Coal,IronSteel,ON,Yr(2031)] = 0.1532
-  xFsFrac[NaturalGas,Coal,IronSteel,ON,Yr(2032)] = 0.1556
-  xFsFrac[NaturalGas,Coal,IronSteel,ON,Yr(2033)] = 0.1588
-  xFsFrac[NaturalGas,Coal,IronSteel,ON,Yr(2034)] = 0.1596
-  xFsFrac[NaturalGas,Coal,IronSteel,ON,Yr(2035)] = 0.1604
-  xFsFrac[NaturalGas,Coal,IronSteel,ON,Yr(2036)] = 0.318
-  xFsFrac[NaturalGas,Coal,IronSteel,ON,Yr(2037)] = 0.3208
-  xFsFrac[NaturalGas,Coal,IronSteel,ON,Yr(2038)] = 0.3232
-  xFsFrac[NaturalGas,Coal,IronSteel,ON,Yr(2039)] = 0.3252
-  xFsFrac[NaturalGas,Coal,IronSteel,ON,Yr(2040)] = 0.3268
-  xFsFrac[NaturalGas,Coal,IronSteel,ON,Yr(2041)] = 0.3292
-  xFsFrac[NaturalGas,Coal,IronSteel,ON,Yr(2042)] = 0.3312
-  xFsFrac[NaturalGas,Coal,IronSteel,ON,Yr(2043)] = 0.3332
-  xFsFrac[NaturalGas,Coal,IronSteel,ON,Yr(2044)] = 0.3352
-  xFsFrac[NaturalGas,Coal,IronSteel,ON,Yr(2045)] = 0.3372
-  xFsFrac[NaturalGas,Coal,IronSteel,ON,Yr(2046)] = 0.3392
-  xFsFrac[NaturalGas,Coal,IronSteel,ON,Yr(2047)] = 0.3416
-  xFsFrac[NaturalGas,Coal,IronSteel,ON,Yr(2048)] = 0.3444
-  xFsFrac[NaturalGas,Coal,IronSteel,ON,Yr(2049)] = 0.3472
-  xFsFrac[NaturalGas,Coal,IronSteel,ON,Yr(2050)] = 0.3496
+  years = collect(Yr(2031):Yr(2050))
+  for year in years
+    xFsFrac[Coke,Coal,IronSteel,ON,year] = 0.113
+  end
+
+  xFsFrac[NaturalGas,Coal,IronSteel,ON,Yr(2025)] = 0.139
+  xFsFrac[NaturalGas,Coal,IronSteel,ON,Yr(2026)] = 0.139
+  xFsFrac[NaturalGas,Coal,IronSteel,ON,Yr(2027)] = 0.139
+  xFsFrac[NaturalGas,Coal,IronSteel,ON,Yr(2028)] = 0.503
+  xFsFrac[NaturalGas,Coal,IronSteel,ON,Yr(2029)] = 0.897
+  xFsFrac[NaturalGas,Coal,IronSteel,ON,Yr(2030)] = 0.897
+  years = collect(Yr(2031):Yr(2050))
+  for year in years
+    xFsFrac[NaturalGas,Coal,IronSteel,ON,year] = 0.877
+  end
 
   # 
   # Constrain FsFrac to match old policy impact (FsFrac < 1.0)
@@ -208,11 +190,14 @@ function IndPolicy(db)
   # 
   # Assign emission factors for natural gas since none in history
   #   
-  years = collect(Yr(2025):Final);
-  Heat = Select(Enduse,"Heat");
+  # Apply only to GHGs per e-mail from Howard - Ian 09/26/24
+  #
+  years = collect(Yr(2025):Final)
+  polls = Select(Poll,["CO2","CH4","N2O","SF6","PFC","HFC"])
+  Heat = Select(Enduse,"Heat")
   NaturalGasEP = Select(FuelEP,"NaturalGas")
 
-  for year in years, poll in Polls
+  for year in years, poll in polls
     FsPOCX[NaturalGas,IronSteel,poll,ON,year] = 
       POCX[Heat,NaturalGasEP,IronSteel,poll,ON,year]
   end
@@ -231,18 +216,18 @@ function IndPolicy(db)
   
   WriteDisk(db,"$CalDB/PEMM",PEMM)
 
-  for year in years, enduse in Enduses
+  for year in years, tech in Techs, enduse in Enduses
     CnvrtEU[enduse,IronSteel,ON,year] = Endogenous
-    CFraction[enduse,GasTech,IronSteel,ON,year] = 1.0
+    CFraction[enduse,tech,IronSteel,ON,year] = 1.0
   end
 
-  for year in years, ctech in CTechs, enduse in Enduses
-    CMSM0[enduse,GasTech,ctech,IronSteel,ON,year] = -170.0
+  for year in years, ctech in CTechs, tech in Techs, enduse in Enduses
+    CMSM0[enduse,tech,ctech,IronSteel,ON,year] = -170.0
   end  
 
   CoalCTech = Select(CTech,"Coal")
-  for year in years, enduse in Enduses
-    CMSM0[enduse,GasTech,CoalCTech,IronSteel,ON,year] = -5.0
+  for year in years, tech in Techs,enduse in Enduses
+    CMSM0[enduse,tech,CoalCTech,IronSteel,ON,year] = -5.0
   end
 
   WriteDisk(db,"$Input/CnvrtEU",CnvrtEU)
