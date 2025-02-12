@@ -1,7 +1,7 @@
 #
 # Com_BldgStdPolicy.jl - Future building code standards
 #
-# Last updated by Kevin Palmer-Wilson on 2023-06-09
+# Last updated by Yang Li on 2024-08-12
 ########################
 #
 # This policy increases the process efficiency standard (PEStdP).
@@ -27,7 +27,7 @@ using SmallModel
 module Com_BldgStdPolicy
 
 import ...SmallModel: ReadDisk,WriteDisk,Select
-import ...SmallModel: HisTime,ITime,MaxTime,First,Future,Final,Yr
+import ...SmallModel: HisTime,ITime,MaxTime,First,Last,Future,Final,Yr
 import ...SmallModel: @finite_math,finite_inverse,finite_divide,finite_power,finite_exp,finite_log
 import ...SmallModel: DB
 
@@ -49,6 +49,8 @@ Base.@kwdef struct CControl
   Tech::SetArray = ReadDisk(db,"CInput/TechKey")
   Techs::Vector{Int} = collect(Select(Tech))
   Year::SetArray = ReadDisk(db,"E2020DB/YearKey")
+  YearDS::SetArray = ReadDisk(db,"E2020DB/YearDS")
+  Years::Vector{Int} = collect(Select(Year))
 
   PEE::VariableArray{5} = ReadDisk(db,"COutput/PEE") # [Enduse,Tech,EC,Area,Year] Process Efficiency ($/Btu)
   PEM::VariableArray{3} = ReadDisk(db,"CCalDB/PEM") # [Enduse,EC,Area] Maximum Process Efficiency ($/mmBtu)
@@ -59,17 +61,17 @@ Base.@kwdef struct CControl
   EEImprovement::VariableArray{2} = zeros(Float64,length(Area),length(Year)) # Energy Efficiency Improvement from Baseline Value ($/Btu)/($/Btu) [Area,Year]
   EIImprovement::VariableArray{2} = zeros(Float64,length(Area),length(Year)) # Energy Intensity Improvement from Baseline Value ($/Btu)/($/Btu) [Area,Year]
   PEEAvg_BC::VariableArray{4} = zeros(Float64,length(Enduse),length(Tech),length(EC),length(Area)) # Base Case Process Efficiency ($/Btu) [Enduse,Tech,EC,Area]
-  # PEMMAvg_BC::VariableArray{4} = zeros(Float64,length(Enduse),length(Tech),length(EC),length(Area)) # Process Efficiency Max. Mult. ($/Btu/($/Btu)) [Enduse,Tech,EC,Area]
+  PEMMAvg_BC::VariableArray{4} = zeros(Float64,length(Enduse),length(Tech),length(EC),length(Area)) # Process Efficiency Max. Mult. ($/Btu/($/Btu)) [Enduse,Tech,EC,Area]
 end
 
 function ComPolicy(db)
   data = CControl(; db)
-  (; Area,Areas,ECs,Enduse,Techs,Year) = data
+  (; Area,Areas,ECs,Enduse,Techs,Year,Years) = data
   (; EEImprovement,EIImprovement,PEE,PEEAvg_BC) = data
-  (; PEM,PEMM,PEStd,PEStdP) = data
+  (; PEM,PEMM,PEMMAvg_BC,PEStd,PEStdP) = data
   
   areas = Select(Area,"NB")
-  years = collect(Yr(2022):Yr(2050))
+  years = collect(Yr(2023):Yr(2050))
   for year in years, area in areas
     EEImprovement[area,year] = 0.262
   end
@@ -87,7 +89,7 @@ function ComPolicy(db)
   areas = Select(Area,"BC")
   for area in areas
 
-    years = collect(Yr(2022):Yr(2025))
+    years = collect(Yr(2023):Yr(2025))
     for year in years
         EEImprovement[area,year] = 0.337
     end
@@ -109,16 +111,15 @@ function ComPolicy(db)
     
   end
   
-  years = collect(Yr(2022):Yr(2050))
-  for year in years, area in Areas
+  for year in Years, area in Areas
     EIImprovement[area,year] = 1/(1-EEImprovement[area,year])-1
   end
 
-  #####
 
   Heat = Select(Enduse,"Heat")
 
   areas = Select(Area,"NB")
+  years = collect(Yr(2023):Final)
   for year in years, area in areas, ec in ECs, tech in Techs
     PEMM[Heat,tech,ec,area,year] = PEMM[Heat,tech,ec,area,year]*
       (1+EIImprovement[area,year])
@@ -130,6 +131,7 @@ function ComPolicy(db)
 
   areas = Select(Area,"QC")
   for year in years, area in areas, ec in ECs, tech in Techs
+  years = collect(Yr(2023):Final)
     PEMM[Heat,tech,ec,area,year] = PEMM[Heat,tech,ec,area,year]*
       (1+EIImprovement[area,year])
     PEStdP[Heat,tech,ec,area,year] = max(PEStd[Heat,tech,ec,area,year],
@@ -140,6 +142,7 @@ function ComPolicy(db)
 
   areas = Select(Area,["SK","AB"])
   for year in years, area in areas, ec in ECs, tech in Techs
+  years = collect(Yr(2023):Final)
     PEMM[Heat,tech,ec,area,year] = PEMM[Heat,tech,ec,area,year]*
       (1+EIImprovement[area,year])
     PEStdP[Heat,tech,ec,area,year] = max(PEStd[Heat,tech,ec,area,year],
@@ -153,10 +156,10 @@ function ComPolicy(db)
     years = Select(Year,(from = "2006",to = "2010"))
     PEEAvg_BC[Heat,tech,ec,area] = 
       sum(PEE[Heat,tech,ec,area,year] for year in years)/5
-    # PEMMAvg_BC[Heat,tech,ec,area] = sum(PEMM[Heat,tech,ec,area,year] for year in years)/5
+    PEMMAvg_BC[Heat,tech,ec,area] = sum(PEMM[Heat,tech,ec,area,year] for year in years)/5
   end
 
-  years = Select(Year,(from = "2021", to = "2050"))
+  years = collect(Yr(2023):Final)
   areas = Select(Area,"BC")
   for year in years, area in areas, ec in ECs, tech in Techs
     PEMM[Heat,tech,ec,area,year] = PEMM[Heat,tech,ec,area,year]*

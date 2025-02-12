@@ -36,6 +36,9 @@ Base.@kwdef struct RControl
   Enduse::SetArray = ReadDisk(db,"$Input/EnduseKey")
   EnduseDS::SetArray = ReadDisk(db,"$Input/EnduseDS")
   Enduses::Vector{Int} = collect(Select(Enduse))
+  Nation::SetArray = ReadDisk(db,"E2020DB/NationKey")
+  NationDS::SetArray = ReadDisk(db,"E2020DB/NationDS")
+  Nations::Vector{Int} = collect(Select(Nation))
   Tech::SetArray = ReadDisk(db,"$Input/TechKey")
   TechDS::SetArray = ReadDisk(db,"$Input/TechDS")
   Techs::Vector{Int} = collect(Select(Tech))
@@ -62,9 +65,10 @@ function ResPolicy(db)
 
   # 
   # Enduse split based on demands in 2014
-  #   
-  TotDmd[Techs,Areas] = sum(xDmd[eu,Techs,ec,Areas,Yr(2014)] for eu in Enduses,ec in ECs)
-
+  #
+  for area in Areas, tech in Techs    
+    TotDmd[tech,area] = sum(xDmd[enduse,tech,ec,area,Yr(2014)] for enduse in Enduses,ec in ECs)
+  end
   # 
   # Electric Peak Savings
   #  
@@ -80,25 +84,24 @@ function ResPolicy(db)
   # Allocate Demand Reduction to all Enduses
   #  
   years = collect(Future:Final)
-  for eu in Enduses, ec in ECs, year in years 
-    xPkSav[eu,ec,ON,year] = xPkSav[eu,ec,ON,year] + TotPkSav[ON,year] * 
-    	xDmd[eu,Electric,ec,ON,Yr(2014)]/TotDmd[Electric,ON]/1.04 
+  for enduse in Enduses, ec in ECs, year in years 
+    xPkSav[enduse,ec,ON,year] = xPkSav[enduse,ec,ON,year]+TotPkSav[ON,year]* 
+    	xDmd[enduse,Electric,ec,ON,Yr(2014)]/TotDmd[Electric,ON]/1.04 
   end
     
   # 
   # Total across enduses
   #   
   years = collect(Future:Final)
-  for year in years, ec in ECs, ecc in ECCs, eu in Enduses
+  for year in years, ec in ECs, ecc in ECCs
     if ECCMap[ec,ecc] == 1
-      xPkSavECC[ecc,ON,year] = sum(xPkSav[eu,ec,ON,year])
+      xPkSavECC[ecc,ON,year] = sum(xPkSav[enduse,ec,ON,year] for enduse in Enduses)
     end
-    
   end
       
   WriteDisk(db,"$Input/xPkSav",xPkSav)
   WriteDisk(db,"SInput/xPkSavECC",xPkSavECC)
-end
+end  #function ResPolicy
 
 Base.@kwdef struct IControl
   db::String
@@ -120,6 +123,9 @@ Base.@kwdef struct IControl
   Enduse::SetArray = ReadDisk(db,"$Input/EnduseKey")
   EnduseDS::SetArray = ReadDisk(db,"$Input/EnduseDS")
   Enduses::Vector{Int} = collect(Select(Enduse))
+  Nation::SetArray = ReadDisk(db,"E2020DB/NationKey")
+  NationDS::SetArray = ReadDisk(db,"E2020DB/NationDS")
+  Nations::Vector{Int} = collect(Select(Nation))
   Tech::SetArray = ReadDisk(db,"$Input/TechKey")
   TechDS::SetArray = ReadDisk(db,"$Input/TechDS")
   Techs::Vector{Int} = collect(Select(Tech))
@@ -127,22 +133,25 @@ Base.@kwdef struct IControl
   YearDS::SetArray = ReadDisk(db,"E2020DB/YearDS")
   Years::Vector{Int} = collect(Select(Year))
 
-  ECCMap::VariableArray{2} = ReadDisk(db,"$Input/ECCMap") # [EC,ECC] # EC TO ECC Map
+  ANMap::VariableArray{2} = ReadDisk(db,"E2020DB/ANMap") # [Area,Nation] Map between Area and Nation
+    ECCMap::VariableArray{2} = ReadDisk(db,"$Input/ECCMap") # [EC,ECC] # EC TO ECC Map
   xDmd::VariableArray{5} = ReadDisk(db,"$Input/xDmd") # [Enduse,Tech,EC,Area,Year] Energy Demand (TBtu/Yr)
   xPkSav::VariableArray{4} = ReadDisk(db,"$Input/xPkSav") # [Enduse,EC,Area,Year] Peak Savings from Programs (MW)
   xPkSavECC::VariableArray{3} = ReadDisk(db,"SInput/xPkSavECC") # [ECC,Area,Year] Peak Savings from Programs (MW)
 
   # Scratch Variables
   TotDmd::VariableArray{2} = zeros(Float64,length(Tech),length(Area)) # [Tech,Area] Sector Enduse Demands (mmBTU/Yr)
+  TotDmdz::VariableArray{3} = zeros(Float64,length(EC),length(Tech),length(Area)) # [EC,Tech,Area] Sector Enduse Demands (mmBTU/Yr)
   TotPkSav::VariableArray{2} = zeros(Float64,length(Area),length(Year)) # [Area,Year] Sector Demand Reductions (MW)
+  TotPkSavz::VariableArray{3} = zeros(Float64,length(EC),length(Area),length(Year)) # [EC,Area,Year] Sector Demand Reductions (MW)
 end
 
 function IndPolicy(db)
   data = IControl(; db)
   (; Input) = data
-  (; Area,Areas,ECCMap,ECCs,ECs) = data 
-  (; Enduses,Tech,Techs) = data 
-  (; TotDmd,TotPkSav,xDmd,xPkSav,xPkSavECC) = data
+  (; Area,Areas,ECCMap,ECC,ECCs,EC,ECs) = data 
+  (; Enduses,Nation,Tech,Techs) = data 
+  (; ANMap,TotDmd,TotDmdz,TotPkSav,TotPkSavz,xDmd,xPkSav,xPkSavECC) = data
 
   # 
   # Enduse split based on demands in 2014
@@ -156,34 +165,68 @@ function IndPolicy(db)
   Electric = Select(Tech,"Electric")
   ON = Select(Area,"ON")
   TotPkSav[ON,Yr(2019):Yr(2026)] = [3,14,27,48,72,99,123,136]
+
   years = collect(Yr(2027):Final)
   for year in years
-    TotPkSav[ON,year] = TotPkSav[ON,Yr(2026)]
+    TotPkSav[ON,year] = TotPkSav[ON,year-1]
   end
 
   # 
   # Allocate Demand Reduction to all Enduses
   #  
   years = collect(Future:Final)
-  for year in years, ec in ECs, eu in Enduses
-    xPkSav[eu,ec,ON,year] = xPkSav[eu,ec,ON,year] + TotPkSav[ON,year] * 
-      xDmd[eu,Electric,ec,ON,Yr(2014)]/TotDmd[Electric,ON]/1.04
+  for year in years, ec in ECs, enduse in Enduses
+    xPkSav[enduse,ec,ON,year] = xPkSav[enduse,ec,ON,year]+TotPkSav[ON,year]* 
+      xDmd[enduse,Electric,ec,ON,Yr(2014)]/TotDmd[Electric,ON]/1.04
   end
 
   # 
   # Total across enduses
   #   
   years = collect(Future:Final)
-  for year in years, ec in ECs, ecc in ECCs, eu in Enduses
+  for year in years, ec in ECs, ecc in ECCs
     if ECCMap[ec,ecc] == 1
-      xPkSavECC[ecc,ON,year] = sum(xPkSav[eu,ec,ON,year])
+      xPkSavECC[ecc,ON,year] = sum(xPkSav[enduse,ec,ON,year] for enduse in Enduses)
     end
-    
+   end
+
+  #
+  # Electric Peak Savings - Ontario, Petrochemicals
+  #
+  Petrochemicals = Select(EC,"Petrochemicals")
+  for area in Areas
+    TotDmdz[Petrochemicals,Electric,area] = sum(xDmd[enduse,Electric,Petrochemicals,area,Yr(2014)] for enduse in Enduses)
   end
-    
+*
+  years = collect(Yr(2024):Yr(2026))
+  for year in years
+    TotPkSavz[Petrochemicals,ON,year] = 20
+  end
+  years = collect(Yr(2027):Final)
+  for year in years
+    TotPkSavz[Petrochemicals,ON,year] = TotPkSavz[Petrochemicals,ON,year-1]
+  end
+
+  #
+  # Allocate Demand Reduction to all Enduses
+  #
+  years = collect(Future:Final)
+  for year in years, enduse in Enduses
+    xPkSav[enduse,Petrochemicals,ON,year] = xPkSav[enduse,Petrochemicals,ON,year]+TotPkSavz[Petrochemicals,ON,year]*
+      xDmd[enduse,Electric,Petrochemicals,ON,Yr(2014)]/TotDmdz[Petrochemicals,Electric,ON]/1.04
+  end
+  #
+  # Total across enduses
+  #
+  ecc = Select(ECC,"Petrochemicals")
+  for year in years
+    xPkSavECC[ecc,ON,year] = sum(xPkSav[enduse,Petrochemicals,ON,year] for enduse in Enduses)
+  end
+
+  #
   WriteDisk(db,"$Input/xPkSav",xPkSav)
   WriteDisk(db,"SInput/xPkSavECC",xPkSavECC)
-end
+end  #function IndPolicy
 
 function PolicyControl(db)
   @info "NRCan_Elec_SmartGrid_Peak.jl - PolicyControl"

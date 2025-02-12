@@ -45,7 +45,7 @@ Base.@kwdef struct EControl
   xUnGCCR::VariableArray{2} = ReadDisk(db,"EGInput/xUnGCCR") # [Unit,Year] Exogenous Generating Capacity Completion Rate (MW)
 
   # Scratch Variables
-  # LocAdds     'Local Variable for Capacity Additions (MW)'
+  # CapAdd     'Local Variable for Capacity Additions (MW)'
   # LocYear     'Local Variable for Year of Addition (Year)'
   # UCode    'Scratch Variable for UnCode',Type = String(20)
 end
@@ -62,7 +62,7 @@ function GetUnitSets(data,unit)
   return plant,node,genco,area
 end
 
-function AddCapacity(data,UCode,LocYear,LocAdds)
+function AddCapacity(data,UCode,LocYear,CapAdd)
   (; Year) = data
   (; CD,UnCode,UnOnLine,xUnGCCI,xUnGCCR) = data
 
@@ -82,9 +82,9 @@ function AddCapacity(data,UCode,LocYear,LocAdds)
   # If the plant comes on later in the forecast, then simulate construction
   #  
   if LocYear - CD[plant,Zero] > (HisTime+1)
-    Loc1 = LocYear - CD[plant,Zero] - ITime+1
+    Loc1 = LocYear-CD[plant,Zero]-ITime+1
     year = Int(Loc1)
-    xUnGCCI[unit,year] = xUnGCCI[unit,year] + LocAdds/1000
+    xUnGCCI[unit,year] = xUnGCCI[unit,year] + CapAdd/1000
 
   #
   # If the plant comes on-line in the first few years, then there is no time
@@ -92,7 +92,7 @@ function AddCapacity(data,UCode,LocYear,LocAdds)
   #  
   else
     year = Select(Year,string(LocYear))
-    xUnGCCR[unit,year] = xUnGCCR[unit,year] + LocAdds/1000
+    xUnGCCR[unit,year] = xUnGCCR[unit,year]+CapAdd/1000
   end
   
   return
@@ -102,13 +102,21 @@ function ElecPolicy(db)
   data = EControl(; db)
   (; UnOnLine,xUnGCCI,xUnGCCR) = data
 
-  #                 Prov_Gentype (UnCode)   Year    xUnGCCI (kW)
-  AddCapacity(data,"NT_New_OnshoreWind",  2023,  3000)
+  #
+  # Thomas (updated in Ref24): added AB, SK, ON, and NB plants
+  #
+  #                 Prov_Gentype (UnCode)  Year  xUnGCCI (kW)
+  AddCapacity(data,"NT_New_OnshoreWind",  2023,   3000)
   AddCapacity(data,"NT_New_OnshoreWind",  2024,  10000)
   AddCapacity(data,"NT_New_OnshoreWind",  2025,  24000)
-  AddCapacity(data,"NU_New_OnshoreWind",  2023,  3000)
-  AddCapacity(data,"NU_New_OnshoreWind",  2024,  6500)
+  AddCapacity(data,"NU_New_OnshoreWind",  2023,   3000)
+  AddCapacity(data,"NU_New_OnshoreWind",  2024,   6500)
   AddCapacity(data,"NU_New_OnshoreWind",  2025,  13000)
+  AddCapacity(data,"AB_New_SolarPV",      2024,  13600)
+  AddCapacity(data,"SK_New_SolarPV",      2024,   3816)
+  AddCapacity(data,"SK_New_SolarPV",      2024,   1000)
+  AddCapacity(data,"ON_New_Battery",      2024,  36900)
+  AddCapacity(data,"NB_New_OnshoreWind",  2025,  25200)
 
   WriteDisk(db,"EGInput/UnOnLine",UnOnLine)
   WriteDisk(db,"EGInput/xUnGCCI",xUnGCCI)

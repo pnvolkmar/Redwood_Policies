@@ -177,27 +177,19 @@ function ElecPolicy(db)
   #  
   NS = Select(Node,"NS")
   NL = Select(NodeX,"NL")
-  years = collect(Yr(2021):Final)
-  for year in years, month in Months, timep in TimePs
-    LLMax[NS,NL,timep,month,year] = 250
-  end
   
-  years = collect(Yr(2023):Final)
+  years = collect(Yr(2021):Final)
   for year in years, month in Months, timep in TimePs
     LLMax[NS,NL,timep,month,year] = 475
   end
   
-  years = collect(Yr(2030):Final)
-  for year in years, month in Months, timep in TimePs
-    LLMax[NS,NL,timep,month,year] = 550
-  end
   
   #
   NL = Select(Node,"NL")
   NS = Select(NodeX,"NS")
   years = collect(Yr(2023):Final)
   for year in years, month in Months, timep in TimePs
-    LLMax[NL,NS,timep,month,year] = 400
+    LLMax[NL,NS,timep,month,year] = 475
   end
 
   #

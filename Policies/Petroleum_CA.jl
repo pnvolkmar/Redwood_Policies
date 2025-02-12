@@ -36,7 +36,8 @@ Base.@kwdef struct SControl
   Years::Vector{Int} = collect(Select(Year))
 
   RPPSw::VariableArray{2} = ReadDisk(db,"SpInput/RPPSw") # [Area,Year] Refined Petroleum Products (RPP) Switch
-  xSqPolCCNet::VariableArray{4} = ReadDisk(db,"MEInput/xSqPolCCNet") # [ECC,Poll,Area,Year] Sequestering Net Emissions (Tonnes/Yr)
+  xSqPol::VariableArray{4} = ReadDisk(db,"MEInput/xSqPol") # [ECC,Poll,Area,Year] Sequestering Emissions (Tonnes/Yr)
+
 
   # Scratch Variables
 end
@@ -44,7 +45,7 @@ end
 function SupplyPolicy(db)
   data = SControl(; db)
   (; Area,ECC,Poll) = data
-  (; xSqPolCCNet,RPPSw) = data
+  (; xSqPol,RPPSw) = data
 
   #
   # CCS on majority of petroleum refining operations by 2030
@@ -54,19 +55,19 @@ function SupplyPolicy(db)
   CO2 = Select(Poll,"CO2")
   years = collect(Yr(2030):Final)
   for year in years
-    # xSqPolCCNet[Petroleum,CO2,CA,year] = -9000000
-    xSqPolCCNet[Petroleum,CO2,CA,year] = -18000000
+    # xSqPol[Petroleum,CO2,CA,year] = -9000000
+    xSqPol[Petroleum,CO2,CA,year] = -18000000
   end
 
   years = collect(Yr(2023):Yr(2029))
   for year in years
-    xSqPolCCNet[Petroleum,CO2,CA,year] = 
-      xSqPolCCNet[Petroleum,CO2,CA,year-1]+
-        (xSqPolCCNet[Petroleum,CO2,CA,Yr(2030)]-
-          xSqPolCCNet[Petroleum,CO2,CA,Yr(2025)])/(2030-2025)
+    xSqPol[Petroleum,CO2,CA,year] = 
+      xSqPol[Petroleum,CO2,CA,year-1]+
+        (xSqPol[Petroleum,CO2,CA,Yr(2030)]-
+          xSqPol[Petroleum,CO2,CA,Yr(2025)])/(2030-2025)
   end
 
-  WriteDisk(db,"MEInput/xSqPolCCNet",xSqPolCCNet)
+  WriteDisk(db,"MEInput/xSqPol",xSqPol)
 
   #
   ########################

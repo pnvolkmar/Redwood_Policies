@@ -47,65 +47,28 @@ Base.@kwdef struct TControl
   YearDS::SetArray = ReadDisk(db,"E2020DB/YearDS")
   Years::Vector{Int} = collect(Select(Year))
 
-  xDmFrac::VariableArray{6} = ReadDisk(db,"$Input/xDmFrac") # [Enduse,Fuel,Tech,EC,Area,Year] Energy Demands Fuel/Tech Split (Btu/Btu)
-  xDmFracBefore::VariableArray{6} = ReadDisk(db,"$Input/xDmFrac") # [Enduse,Fuel,Tech,EC,Area,Year] Energy Demands Fuel/Tech Split (Btu/Btu)
-  DmFracMax::VariableArray{6} = ReadDisk(db,"$Input/DmFracMax") # [Enduse,Fuel,Tech,EC,Area,Year] Demand Fuel/Tech Fraction Maximum (Btu/Btu)
-  DmFracMin::VariableArray{6} = ReadDisk(db,"$Input/DmFracMin") # [Enduse,Fuel,Tech,EC,Area,Year] Demand Fuel/Tech Fraction Minimum (Btu/Btu)
   POCX::VariableArray{7} = ReadDisk(db,"$Input/POCX") # [Enduse,FuelEP,Tech,EC,Poll,Area,Year] Marginal Pollution Coefficients (Tonnes/TBtu)
 
-  # Scratch Variables
-  xDmFracSum::VariableArray{5} = zeros(Float64,length(Enduse),length(Tech),length(EC),length(Area),length(Year)) # [Enduse,Tech,EC,Area,Year] 
-  DDD::VariableArray{1} = zeros(Float64,length(Year)) # [Year] Variable for Displaying Outputs
-  GasPoolFrac::VariableArray{6} = zeros(Float64,length(Enduse),length(Fuel),length(Tech),length(EC),length(Area),length(Year)) # [Enduse,Fuel,Tech,EC,Area,Year] Variable for calculating total gasoline and ethanol
-  GasPoolFracTotal::VariableArray{5} = zeros(Float64,length(Enduse),length(Tech),length(EC),length(Area),length(Year)) # [Enduse,Tech,EC,Area,Year] Variable for calculating total gasoline and ethanol
 end
 
 function TransPolicy(db)
   data = TControl(; db)
   (; Input) = data
   (; Areas,EC,Enduse) = data 
-  (; Fuel) = data
-  (; Poll,Tech) = data
-  (; DmFracMax,DmFracMin,GasPoolFrac) = data
-  (; GasPoolFracTotal,POCX,xDmFrac,xDmFracSum) = data
+  (; Fuel,Poll,Tech) = data
+  (; POCX) = data
   
   enduse = Select(Enduse,["Carriage"])
-  techs = Select(Tech,["LDVHybrid","LDTHybrid"])
-  fuels = Select(Fuel,["Gasoline","Ethanol"])
+  fuelep = Select(Fuel,["Gasoline"])
   ec = Select(EC,["Passenger"])
   years = collect(Future:Final)
-
-  xDmFracSum[enduse,techs,ec,Areas,years] = 
-    sum(xDmFrac[enduse,fuel,techs,ec,Areas,years] for fuel in fuels)
-  
-  GasPoolFracTotal[enduse,techs,ec,Areas,years].=xDmFracSum[enduse,techs,ec,Areas,years]
-  for fuel in fuels
-    GasPoolFrac[enduse,fuel,techs,ec,Areas,years].=
-      xDmFrac[enduse,fuel,techs,ec,Areas,years]./
-        GasPoolFracTotal[enduse,techs,ec,Areas,years] 
-  end
-  
-  fuel = Select(Fuel,["Electric"])
-  DmFracMin[enduse,fuel,techs,ec,Areas,years].=0.65
-  xDmFrac[enduse,fuel,techs,ec,Areas,years].=0.65
-
-  fuels = Select(Fuel,["Gasoline","Ethanol"])
-  xDmFrac[enduse,fuels,techs,ec,Areas,years] .= 
-    GasPoolFrac[enduse,fuels,techs,ec,Areas,years]*0.35
-  DmFracMax[enduse,fuels,techs,ec,Areas,years] .= 
-    GasPoolFrac[enduse,fuels,techs,ec,Areas,years]*0.35
-
-  WriteDisk(db,"$Input/xDmFrac",xDmFrac)
-  WriteDisk(db,"$Input/DmFracMax",DmFracMax)
-  WriteDisk(db,"$Input/DmFracMin",DmFracMin)
-
-  fuelep = Select(Fuel,["Gasoline"])
-  
   CACs = Select(Poll,["PMT","PM10","PM25","SOX","NOX","VOC","COX","NH3","Hg","BC"])
+
   techToUse = Select(Tech,["LDVGasoline"])
   techToAssign = Select(Tech,["LDVHybrid"])
   POCX[enduse,fuelep,techToAssign,ec,CACs,Areas,years] = 
     POCX[enduse,fuelep,techToUse,ec,CACs,Areas,years]
+
   techToAssign = Select(Tech,["LDTHybrid"])
   techToUse = Select(Tech,["LDTGasoline"])
   POCX[enduse,fuelep,techToAssign,ec,CACs,Areas,years] = 

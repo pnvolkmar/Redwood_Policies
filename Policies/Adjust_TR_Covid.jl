@@ -68,12 +68,11 @@ function TransPolicy(db)
   for year in Years
     Adjust[year] = 1.00
   end
-  Adjust[Yr(2022)] = 1.20
-  Adjust[Yr(2023)] = 1.35
-  Adjust[Yr(2024)] = 1.50
+  Adjust[Yr(2023)] = 1.125
+  Adjust[Yr(2024)] = 1.25
   years = collect(Yr(2025):Final)
   for year in years
-    Adjust[year] = 1.60
+    Adjust[year] = 1.30
   end
 
   for eu in Enduses, ec in ecs, area in cn_areas, year in Years

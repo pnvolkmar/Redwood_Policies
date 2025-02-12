@@ -2,10 +2,10 @@
 # Ind_Biomass_QC.jl - Programme de biomasse forestière résiduelle (industries et commercial)
 #
 # Target 124 kt GHG by 2024 in QC; assume commercial amounts are negligible.
-# Approach: Use DmFrac to substitute petroleum coke with Biomass in cement and natural gas with Biomass in Food & Tobacco
+# Approach: Use DmFrac to substitute petroleum coke with biomass in cement and natural gas with Biomass in Food & Tobacco
 # See QC BiomasseProgramme.xlsx
 # (RW 06/02/2021)
-# Updated fuel switching targets for Ref23 tuning (RST 06Sept2022)
+# Updated fuel switching targets for Ref24 tuning (RST 06Sept2022)
 #
 
 using SmallModel
@@ -60,38 +60,38 @@ Base.@kwdef struct IControl
   DDD::VariableArray{1} = zeros(Float64,length(Year)) # [Year] Variable for Displaying Outputs
   DmdFrac::VariableArray{5} = zeros(Float64,length(Enduse),length(Tech),length(EC),length(Area),length(Year)) # [Enduse,Tech,EC,Area,Year] Process Energy Requirement (mmBtu/Yr)
   DmdTotal::VariableArray{1} = zeros(Float64,length(Year)) # [Year] Total Demand (TBtu/Yr)
-  PolicyCost::VariableArray{1} = zeros(Float64,length(Year)) # [Year] Policy Cost ($/TBtu)
+  PolicyCost::VariableArray{2} = zeros(Float64,length(Area),length(Year)) # [Area,Year] Policy Cost ($/TBtu)
   Target::VariableArray{1} = zeros(Float64,length(Year)) # [Year] Policy Fuel Target (Btu/Btu)
 end
 
 function SetFuelSwitchingTargets(db)
   data = IControl(; db)
   (; Input) = data
-  (; Area,EC,Enduse) = data
-  (; Fuel) = data
-  (; Tech,Years) = data
-  (; DmFracMin) = data
-  (; Target,xDmFrac) = data
+  (; Area,Areas,EC,Enduse,Fuel,Tech,Years) = data
+  (; DmFracMin,Target,xDmFrac) = data
 
-  for year in Years
-    Target[year] = 0
-  end
+  areas = Select(Area,"QC")
+  enduses = Select(Enduse,"Heat")
 
   #
   # Target for fuel switching, Petroleum Coke to Biomass in Cement
   #  
-  areas = Select(Area,"QC")
+  for year in Years
+    Target[year] = 0
+  end
+  years = Yr(2024)
+  for year in years
+    Target[Yr(2024)] = 0.0514
+  end
+
   ecs = Select(EC,"Cement")
-  enduses = Select(Enduse,"Heat")
   techs = Select(Tech,"Coal")
   Biomass = Select(Fuel,"Biomass")
   PetroCoke = Select(Fuel,"PetroCoke")
   NaturalGas = Select(Fuel,"NaturalGas")
 
-  years = collect(Yr(2022):Yr(2050))
   
   for year in years, area in areas, ec in ecs, tech in techs, enduse in enduses
-    Target[year] = 0.15
     xDmFrac[enduse,Biomass,tech,ec,area,year] =
       xDmFrac[enduse,Biomass,tech,ec,area,year]+
         xDmFrac[enduse,PetroCoke,tech,ec,area,year]*Target[year]
@@ -107,59 +107,257 @@ function SetFuelSwitchingTargets(db)
   #
   # Target for fuel switching, Natural Gas to Biomass in Food & Tobacco
   #  
-  for year in Years
+  for year in years
     Target[year] = 0
   end
-  years = collect(Yr(2022):Yr(2050))
+  years = Yr(2024)
+  for year in years
+    Target[year] = 0.0145
+  end
   ecs = Select(EC,"Food")
   techs = Select(Tech,"Gas")
   for year in years, area in areas, ec in ecs, tech in techs, enduse in enduses
-    Target[year] = 0.047
     xDmFrac[enduse,Biomass,tech,ec,area,year] = 
       xDmFrac[enduse,Biomass,tech,ec,area,year]+
         xDmFrac[enduse,NaturalGas,tech,ec,area,year]*Target[year]
     xDmFrac[enduse,NaturalGas,tech,ec,area,year] = 
       xDmFrac[enduse,NaturalGas,tech,ec,area,year]*(1-Target[year])
 
-    DmFracMin[enduse,Biomass,tech,ec,area,year] = 
-      xDmFrac[enduse,Biomass,tech,ec,area,year]
-    DmFracMin[enduse,NaturalGas,tech,ec,area,year] = 
-      xDmFrac[enduse,NaturalGas,tech,ec,area,year]
+    DmFracMin[enduse,Biomass,tech,ec,area,year] = xDmFrac[enduse,Biomass,tech,ec,area,year]
+    DmFracMin[enduse,NaturalGas,tech,ec,area,year] = xDmFrac[enduse,NaturalGas,tech,ec,area,year]
   end
-  
-  WriteDisk(db,"$Input/xDmFrac",xDmFrac)
-  WriteDisk(db,"$Input/DmFracMin",DmFracMin)
-end
 
- function DividePolicyCosts(db)
-  data = IControl(; db)
-  (; Input) = data
-  (; Area,EC,Enduse,Tech,Years) = data
-  (; DInvExo,PolicyCost,xInflation) = data
-
-  for year in Years
-    PolicyCost[year] = 0
+  #
+  # Target for fuel switching, Petroleum Coke to Biomass in Cement
+  #
+  for year in years
+    Target[year] = 0
   end
-  
-  areas = Select(Area,"QC")
-  enduses = Select(Enduse,"Heat")
-  years = Yr(2022)
+  years = Yr(2025)
+  for year in years
+    Target[year] = 0.190
+  end
   ecs = Select(EC,"Cement")
   techs = Select(Tech,"Coal")
+
   for year in years, area in areas, ec in ecs, tech in techs, enduse in enduses
-    PolicyCost[year] = 46.75
-    #DInvExo[enduse,tech,ec,area,year] = DInvExo[enduse,tech,ec,area,year]*PolicyCost[year] #works
-    #DInvExo[enduse,tech,ec,area,year] = DInvExo[enduse,tech,ec,area,year]+PolicyCost[year] #does not work
-    DInvExo[enduse,tech,ec,area,year] = DInvExo[enduse,tech,ec,area,year]+
-      (PolicyCost[year])/xInflation[area,year]/2
+    xDmFrac[enduse,Biomass,tech,ec,area,year] = 
+      xDmFrac[enduse,Biomass,tech,ec,area,year]+
+        xDmFrac[enduse,PetroCoke,tech,ec,area,year]*Target[year]
+    xDmFrac[enduse,PetroCoke,tech,ec,area,year] = 
+      xDmFrac[enduse,PetroCoke,tech,ec,area,year]*(1-Target[year])
+
+    DmFracMin[enduse,Biomass,tech,ec,area,year] = xDmFrac[enduse,Biomass,tech,ec,area,year]
+    DmFracMin[enduse,PetroCoke,tech,ec,area,year] = xDmFrac[enduse,PetroCoke,tech,ec,area,year]
   end
-  
+
+  #
+  # Target for fuel switching, Natural Gas to Biomass in Food & Tobacco
+  #
+  for year in years
+    Target[year] = 0
+  end
+  years = Yr(2025)
+  for year in years
+    Target[year] = 0.038
+  end
+
   ecs = Select(EC,"Food")
   techs = Select(Tech,"Gas")
+
   for year in years, area in areas, ec in ecs, tech in techs, enduse in enduses
-    PolicyCost[year] = 46.75
-    DInvExo[enduse,tech,ec,area,year] = DInvExo[enduse,tech,ec,area,year]+
-      (PolicyCost[year])/xInflation[area,year]/2
+    xDmFrac[enduse,Biomass,tech,ec,area,year] = 
+      xDmFrac[enduse,Biomass,tech,ec,area,year]+
+        xDmFrac[enduse,NaturalGas,tech,ec,area,year]*Target[year]
+    xDmFrac[enduse,NaturalGas,tech,ec,area,year] = 
+      xDmFrac[enduse,NaturalGas,tech,ec,area,year]*(1-Target[year])
+
+    DmFracMin[enduse,Biomass,tech,ec,area,year] = xDmFrac[enduse,Biomass,tech,ec,area,year]
+    DmFracMin[enduse,NaturalGas,tech,ec,area,year] = xDmFrac[enduse,NaturalGas,tech,ec,area,year]
+  end
+
+  #
+  # Target for fuel switching, Petroleum Coke to Biomass in Cement
+  #
+  for year in years
+    Target[year] = 0
+  end
+  years = Yr(2026)
+  for year in years
+    Target[year] = 0.292
+  end
+
+  ecs = Select(EC,"Cement")
+  techs = Select(Tech,"Coal")
+
+  for year in years, area in areas, ec in ecs, tech in techs, enduse in enduses
+    xDmFrac[enduse,Biomass,tech,ec,area,year] = 
+      xDmFrac[enduse,Biomass,tech,ec,area,year]+
+        xDmFrac[enduse,PetroCoke,tech,ec,area,year]*Target[year]
+    xDmFrac[enduse,PetroCoke,tech,ec,area,year] = 
+      xDmFrac[enduse,PetroCoke,tech,ec,area,year]*(1-Target[year])
+
+    DmFracMin[enduse,Biomass,tech,ec,area,year] = xDmFrac[enduse,Biomass,tech,ec,area,year]
+    DmFracMin[enduse,PetroCoke,tech,ec,area,year] = xDmFrac[enduse,PetroCoke,tech,ec,area,year]
+  end
+
+  #
+  # Target for fuel switching, Natural Gas to Biomass in Food & Tobacco
+  #
+  for year in years
+    Target[year] = 0
+  end
+  Target[Yr(2026)] = 0.077
+
+  years = Yr(2026)
+  ecs = Select(EC,"Food")
+  techs = Select(Tech,"Gas")
+
+  for year in years, area in areas, ec in ecs, tech in techs, enduse in enduses
+    xDmFrac[enduse,Biomass,tech,ec,area,year] = 
+      xDmFrac[enduse,Biomass,tech,ec,area,year]+
+        xDmFrac[enduse,NaturalGas,tech,ec,area,year]*Target[year]
+    xDmFrac[enduse,NaturalGas,tech,ec,area,year] = 
+      xDmFrac[enduse,NaturalGas,tech,ec,area,year]*(1-Target[year])
+
+    DmFracMin[enduse,Biomass,tech,ec,area,year] = xDmFrac[enduse,Biomass,tech,ec,area,year]
+    DmFracMin[enduse,NaturalGas,tech,ec,area,year] = xDmFrac[enduse,NaturalGas,tech,ec,area,year]
+  end
+
+  #
+  # Target for fuel switching, Petroleum Coke to Biomass in Cement
+  #
+  for year in years
+    Target[year] = 0
+  end
+  Target[Yr(2027)] = 0.456
+
+  years = Yr(2027)
+  ecs = Select(EC,"Cement")
+  techs = Select(Tech,"Coal")
+
+  for year in years, area in areas, ec in ecs, tech in techs, enduse in enduses
+    xDmFrac[enduse,Biomass,tech,ec,area,year] = 
+      xDmFrac[enduse,Biomass,tech,ec,area,year]+
+        xDmFrac[enduse,PetroCoke,tech,ec,area,year]*Target[year]
+    xDmFrac[enduse,PetroCoke,tech,ec,area,year] = 
+      xDmFrac[enduse,PetroCoke,tech,ec,area,year]*(1-Target[year])
+
+    DmFracMin[enduse,Biomass,tech,ec,area,year] = xDmFrac[enduse,Biomass,tech,ec,area,year]
+    DmFracMin[enduse,PetroCoke,tech,ec,area,year] = xDmFrac[enduse,PetroCoke,tech,ec,area,year]
+  end
+
+  #
+  # Target for fuel switching, Natural Gas to Biomass in Food & Tobacco
+  #
+  for year in years
+    Target[year] = 0
+  end
+  Target[Yr(2027)] = 0.116
+
+  years = Yr(2027)
+  ecs = Select(EC,"Food")
+  techs = Select(Tech,"Gas")
+
+  for year in years, area in areas, ec in ecs, tech in techs, enduse in enduses
+    xDmFrac[enduse,Biomass,tech,ec,area,year] = 
+      xDmFrac[enduse,Biomass,tech,ec,area,year]+
+        xDmFrac[enduse,NaturalGas,tech,ec,area,year]*Target[year]
+    xDmFrac[enduse,NaturalGas,tech,ec,area,year] = 
+      xDmFrac[enduse,NaturalGas,tech,ec,area,year]*(1-Target[year])
+
+    DmFracMin[enduse,Biomass,tech,ec,area,year] = xDmFrac[enduse,Biomass,tech,ec,area,year]
+    DmFracMin[enduse,NaturalGas,tech,ec,area,year] = xDmFrac[enduse,NaturalGas,tech,ec,area,year]
+  end
+
+  #
+  # Target for fuel switching, Petroleum Coke to Biomass in Cement
+  #
+  for year in years
+    Target[year] = 0
+  end
+  years = collect(Yr(2028):Final)
+  for year in years
+    Target[year] = 0.62
+  end
+  ecs = Select(EC,"Cement")
+  techs = Select(Tech,"Coal")
+
+  for year in years, area in areas, ec in ecs, tech in techs, enduse in enduses
+    xDmFrac[enduse,Biomass,tech,ec,area,year] = 
+      xDmFrac[enduse,Biomass,tech,ec,area,year]+
+        xDmFrac[enduse,PetroCoke,tech,ec,area,year]*Target[year]
+    xDmFrac[enduse,PetroCoke,tech,ec,area,year] = 
+      xDmFrac[enduse,PetroCoke,tech,ec,area,year]*(1-Target[year])
+
+    DmFracMin[enduse,Biomass,tech,ec,area,year] = xDmFrac[enduse,Biomass,tech,ec,area,year]
+    DmFracMin[enduse,PetroCoke,tech,ec,area,year] = xDmFrac[enduse,PetroCoke,tech,ec,area,year]
+  end
+
+  #
+  # Target for fuel switching, Natural Gas to Biomass in Food & Tobacco
+  #
+  for year in years
+    Target[year] = 0
+  end
+  years = collect(Yr(2028):Final)
+  for year in years
+    Target[year] = 0.152
+  end
+
+  ecs = Select(EC,"Food")
+  techs = Select(Tech,"Gas")
+
+  for year in years, area in areas, ec in ecs, tech in techs, enduse in enduses
+    xDmFrac[enduse,Biomass,tech,ec,area,year] = 
+      xDmFrac[enduse,Biomass,tech,ec,area,year]+
+        xDmFrac[enduse,NaturalGas,tech,ec,area,year]*Target[year]
+    xDmFrac[enduse,NaturalGas,tech,ec,area,year] = 
+      xDmFrac[enduse,NaturalGas,tech,ec,area,year]*(1-Target[year])
+
+    DmFracMin[enduse,Biomass,tech,ec,area,year] = xDmFrac[enduse,Biomass,tech,ec,area,year]
+    DmFracMin[enduse,NaturalGas,tech,ec,area,year] = xDmFrac[enduse,NaturalGas,tech,ec,area,year]
+  end
+  
+  WriteDisk(db,"$Input/DmFracMin",DmFracMin)
+end
+  
+function DividePolicyCosts(db)
+  data = IControl(; db)
+  (; Input) = data
+  (; Area,Areas,EC,Enduse,Tech,Years) = data
+  (; DInvExo,PolicyCost,xInflation) = data
+
+  #
+  # Program Costs $M
+  #
+  
+  QC = Select(Area,"QC")
+  Heat = Select(Enduse,"Heat")
+
+  PolicyCost[QC,Yr(2024)] = 19.04
+  PolicyCost[QC,Yr(2025)] = 52.37
+  PolicyCost[QC,Yr(2026)] = 79.00
+  PolicyCost[QC,Yr(2027)] = 88.09
+  PolicyCost[QC,Yr(2028)] = 120.00
+  
+  #
+  # Divide costs evenly between Cement and Food since substitution is similar in TJ.
+  #
+  # TODO:  Promula Year selection is from previous section. I think the years should be Yr(2024) to Yr(2028)
+  years = collect(Yr(2028):Final)
+  Cement = Select(EC,"Cement")
+  Coal = Select(Tech,"Coal")
+  for year in years
+    DInvExo[Heat,Coal,Cement,QC,year] = DInvExo[Heat,Coal,Cement,QC,year]+
+      (PolicyCost[QC,year]/xInflation[QC,year])/2
+  end
+  
+  Food = Select(EC,"Food")
+  Gas = Select(Tech,"Gas")
+  for year in years
+    DInvExo[Heat,Gas,Food,QC,year] = DInvExo[Heat,Gas,Food,QC,year]+
+      (PolicyCost[QC,year]/xInflation[QC,year])/2
   end
   
    WriteDisk(db,"$Input/DInvExo",DInvExo)

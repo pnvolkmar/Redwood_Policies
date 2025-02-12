@@ -5,6 +5,8 @@
 # Details about the underlying assumptions for this policy are available in the following file:
 # \\ncr.int.ec.gc.ca\shares\e\ECOMOD\Documentation\Policy - Buildings Policies.docx.
 #
+# Last updated by Yang Li on 2024-06-13
+#
 
 using SmallModel
 
@@ -77,7 +79,7 @@ function ResPolicy(db)
   
   MB = Select(Area,"MB")
   ecs = ECs
-  years = collect(Yr(2022):Final)
+  years = collect(Yr(2023):Final)
   
   #
   # Default Value (for all Techs)
@@ -140,7 +142,7 @@ Base.@kwdef struct CControl
   CalDB::String = "CCalDB"
   Input::String = "CInput"
   Outpt::String = "COutput"
-  BCNameDB::String = ReadDisk(db,"E2020DB/BCNameDB") #  Base Case Name
+  BCNameDB::String = ReadDisk(db,"E2020DB/BCNameDB")#  Base Case Name
 
   Area::SetArray = ReadDisk(db,"E2020DB/AreaKey")
   AreaDS::SetArray = ReadDisk(db,"E2020DB/AreaDS")
@@ -193,7 +195,7 @@ function ComPolicy(db)
   
   MB = Select(Area,"MB")
   ecs = Select(EC,(from = "Wholesale", to = "OtherCommercial"))
-  years = collect(Yr(2022):Final)
+  years = collect(Yr(2023):Final)
   
   #
   # Default Value (for all Techs)

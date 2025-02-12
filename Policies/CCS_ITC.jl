@@ -1,6 +1,14 @@
 #
-# CCS_ITC.jl - Investment Tax Credit (ITC) for Carbon Sequestration
+# CCS_ITC.jl - Investment Tax Credit (ITC) for Carbon Sequestration. The tax credit is designed to provide a discount on
+# capital costs associated with the installation of carbon capture and storage facilities in Canada. Legislation was finalized in June 2024.
+# Alberta introduced their own CCUS investment tax credit to complement the federal tax credit which increaes
+# the total amount that can be claimed in Alberta throughout the projection period. The Alberta version can be
+# claimed on top of the federal credit, with eligible projects back dated to 2022.
 #
+
+
+
+
 
 using SmallModel
 
@@ -31,9 +39,18 @@ function MacroPolicy(db)
   data = MControl(; db)
   (; Areas,Years) = data
   (; SqIVTC) = data
-
-  for area in Areas, year in Years
+  
+  years = collect(Yr(2023):Yr(2030))
+  for area in Areas, year in years
     SqIVTC[area,year] = 0.5
+  end
+  years = collect(Yr(2031):Yr(2040))
+  for area in Areas, year in years
+    SqIVTC[area,year] = 0.25
+  end
+  years = collect(Yr(2041):Yr(2050))
+  for area in Areas, year in years
+    SqIVTC[area,year] = 0.0
   end
 
   WriteDisk(db,"MEInput/SqIVTC",SqIVTC)
