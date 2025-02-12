@@ -72,6 +72,15 @@ function IndPolicy(db::String)
   (; Tech) = data
   (; DInvExo,DmFracMin,DmFracMax) = data
   (; PolicyCost,Target,xDmFrac,xInflation) = data
+  ####################
+  p_eu = Select(Enduse, "Motors")
+  p_f  = Select(Fuel,"Diesel")
+  p_t  = Select(Tech, "OffRoad")
+  p_ec = Select(EC,"IronOreMining")
+  p_a  = Select(Area, "ON")
+  p_y  = Yr(1985)
+  print("\nDmFracMin: ",DmFracMin[p_eu,p_f,p_t,p_ec,p_a,p_y])
+  ####################
   #
   # Substitution of biomass for natural gas occurs through the
   # provision of process heat used in cement
@@ -157,9 +166,6 @@ function IndPolicy(db::String)
     DmFracMin[enduse,NaturalGas,tech,ec,area,year] = xDmFrac[enduse,NaturalGas,tech,ec,area,year-1]
   end
 
-  WriteDisk(db,"$Input/DmFracMin",DmFracMin)
-  WriteDisk(db,"$Input/DmFracMax",DmFracMax)
-  
   #
   # Program Costs $M
   #

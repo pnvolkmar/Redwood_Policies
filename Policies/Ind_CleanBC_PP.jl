@@ -68,10 +68,9 @@ Base.@kwdef struct IControl
 end
 
 function AllocateReduction(data::IControl,enduses,techs,ecs,areas,years)
-  (; Outpt) = data   
-  (; db) = data 
-  (; DERRef) = data
-  (; DERRRExo,DmdRef,DmdTotal) = data
+  (; db,Outpt) = data    
+  (; DmdRef,DmdTotal) = data
+  (; DERRef,DERRRExo) = data
   (; FractionRemovedAnnually) = data
   (; ReductionAdditional,ReductionTotal) = data
 
@@ -178,11 +177,9 @@ function IndPolicy(db::String)
 
   AllocateReduction(data,Enduses,techs,ecs,areas,years)
   
-  # 
-  # Policy costs have been adjusted since 2022 was removed. Need to check for accuracy.
-  # NC 06/20/2024.
   #
   # Program Costs $M  
+  # 2022 has been removed so make sure that values are correct. NC 06/20/2024.
   #  
   PolicyCost[ecs,Yr(2023)] = 8.48
 
