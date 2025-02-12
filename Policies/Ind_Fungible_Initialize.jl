@@ -52,8 +52,11 @@ function IndPolicy(db)
   (; Fuels,Techs) = data
   (; DmFracRef,xDmFrac) = data
 
-  xDmFrac[Enduses,Fuels,Techs,ECs,Areas,Future:Final] = 
-    DmFracRef[Enduses,Fuels,Techs,ECs,Areas,Future:Final]
+  years = collect(Future:Final)
+  for year in years, area in Areas, ec in ECs, tech in Techs, fuel in Fuels, enduse in Enduses
+    xDmFrac[enduse,fuel,tech,ec,area,year] = 
+      DmFracRef[enduse,fuel,tech,ec,area,year]
+  end
 
   WriteDisk(db,"$Input/xDmFrac",xDmFrac)
 end

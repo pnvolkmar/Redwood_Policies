@@ -78,7 +78,7 @@ function TransPolicy(db)
   HDV8Diesel = Select(Tech,"HDV8Diesel");
   for enduse in Enduses, year in years
     xMMSF[enduse,HDV8Diesel,Freight,QC,year] = 
-      max(xMMSF[enduse,HDV8Diesel,Freight,QC,year]-0.04,0.00)
+      xMMSF[enduse,HDV8Diesel,Freight,QC,year]-0.04
   end
 
   WriteDisk(db,"$CalDB/xMMSF",xMMSF);    
