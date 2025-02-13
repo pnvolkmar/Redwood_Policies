@@ -74,6 +74,7 @@ function IndPolicy(db::String)
   (; DInvExo,DmFracMin,DmFracMax) = data
   (; PolicyCost,Target,xDmFrac,xInflation) = data
   ####################
+  # Debugging
   p_eu = Select(Enduse, "Motors")
   p_f  = Select(Fuel,"Diesel")
   p_t  = Select(Tech, "OffRoad")
@@ -81,8 +82,8 @@ function IndPolicy(db::String)
   p_on  = Select(Area, "ON")
   p_bc  = Select(Area, "BC")
   p_y  = Yr(1985)
-  print("\nDmFracMin [ON]: ",DmFracMin[p_eu,p_f,p_t,p_ec,p_on,p_y])
-  print("\nDmFracMin [BC]: ",DmFracMin[p_eu,p_f,p_t,p_ec,p_bc,p_y])
+  # print("\nDmFracMin [ON]: ",DmFracMin[p_eu,p_f,p_t,p_ec,p_on,p_y])
+  # print("\nDmFracMin [BC]: ",DmFracMin[p_eu,p_f,p_t,p_ec,p_bc,p_y])
   ####################
   #
   # Substitution of biomass for natural gas occurs through the
@@ -229,8 +230,8 @@ function IndPolicy(db::String)
   ON = Select(Area, "ON")
   BC = Select(Area, "BC")
   ####################
-  print("\nDmFracMin [ON]: ",DmFracMin[p_eu,p_f,p_t,p_ec,p_on,p_y])
-  print("\nDmFracMin [BC]: ",DmFracMin[p_eu,p_f,p_t,p_ec,p_bc,p_y])
+  # print("\nDmFracMin [ON]: ",DmFracMin[p_eu,p_f,p_t,p_ec,p_on,p_y])
+  # print("\nDmFracMin [BC]: ",DmFracMin[p_eu,p_f,p_t,p_ec,p_bc,p_y])
   ####################
   
   for year in Years, ec in ECs, tech in Techs, fuel in Fuels, enduse in Enduses
@@ -245,8 +246,8 @@ function IndPolicy(db::String)
   # DmFracMin[:,:,:,:,ON,:] .= DmFracMin[:,:,:,:,BC,:]
   # DmFracMax[:,:,:,:,ON,:] .= DmFracMax[:,:,:,:,BC,:]
   ####################
-  print("\nDmFracMin [ON]: ",DmFracMin[p_eu,p_f,p_t,p_ec,p_on,p_y])
-  print("\nDmFracMin [BC]: ",DmFracMin[p_eu,p_f,p_t,p_ec,p_bc,p_y])
+  # print("\nDmFracMin [ON]: ",DmFracMin[p_eu,p_f,p_t,p_ec,p_on,p_y])
+  # print("\nDmFracMin [BC]: ",DmFracMin[p_eu,p_f,p_t,p_ec,p_bc,p_y])
   ####################
   ##############################################################################
   
