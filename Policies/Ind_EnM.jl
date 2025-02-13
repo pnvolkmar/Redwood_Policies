@@ -176,6 +176,7 @@ function IndPolicy(db)
   AnnualAdjustment[Yr(2049)] = 4.028
   AnnualAdjustment[Yr(2050)] = 4.174
   
+  years = collect(Yr(2022):Yr(2050))
   tech_e = Select(Tech,!=("Electric"))
   tech_s = Select(Tech,!=("Steam"))
   techs = intersect(tech_e,tech_s)

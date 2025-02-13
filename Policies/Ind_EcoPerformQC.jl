@@ -119,10 +119,11 @@ end # AllocateReduction
 
 function IndPolicy(db)
   data = IControl(; db)
-  (; Area,EC,Enduses) = data
+  (; Input) = data
+  (; Area,EC,Enduses,Enduse) = data
   (; Nation,Tech) = data
   (; AnnualAdjustment,DmdFrac,DmdRef,DmdTotal) = data
-  (; PolicyCost,ReductionAdditional,xInflation) = data
+  (; PolicyCost,ReductionAdditional,xInflation,PInvExo) = data
 
   @. AnnualAdjustment = 1.0
 
