@@ -290,4 +290,4 @@ if abspath(PROGRAM_FILE) == @__FILE__
   PolicyControl(DB)
 end
 
-end
+end # Module
