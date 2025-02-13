@@ -111,7 +111,6 @@ function IndPolicy(db)
   end
 
   WriteDisk(db,"$Input/DmFracMin",DmFracMin);
-  WriteDisk(db,"$Input/xDmFrac",xDmFrac);
 end
 
 function PolicyControl(db)

@@ -219,23 +219,11 @@ function TransPolicy(db)
   techs = Select(Tech,(from = "LDVGasoline",to = "LDTFuelCell"))
   for year in years, area in areas
     ICEMarketShareNew[area,year] = MSFPVBase[area,year]-MSFTargetSum[area,year]
-  end
-  #######################
-  print("\n ICEMarketShareNew :", ICEMarketShareNew[a_p,y_p])
-  #######################
 
-
-  for year in years, area in areas
     @finite_math ICEMarketChange[area,year] = ICEMarketShareNew[area,year]/
       ICEMarketShareOld[area,year]
   end
-  #######################
-  print("\n ICEMarketChange :", ICEMarketChange[a_p,y_p])
-  #######################
-  
-  #######################
-  print("\n xMMSF :", xMMSF[eu_p,t_p,ec_p,a_p,y_p])
-  #######################
+    
   for year in years, area in areas, tech in techs, enduse in Enduses
     xMMSF[enduse,tech,Passenger,area,year] = xMMSF[enduse,tech,Passenger,area,year]*
       ICEMarketChange[area,year]

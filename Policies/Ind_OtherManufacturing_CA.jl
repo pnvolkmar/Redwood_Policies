@@ -80,8 +80,7 @@ function IndPolicy(db)
 
   years = collect(Yr(2045):Final)
   for year in years, ec in ecs, tech in techs, enduse in enduses
-    DmFracMin[enduse,Electric,tech,ec,CA,year] = 
-      max(DmFracMin[enduse,Electric,tech,ec,CA,year],0.50)
+    DmFracMin[enduse,Electric,tech,ec,CA,year] = 0.50
   end
 
   #
@@ -92,7 +91,7 @@ function IndPolicy(db)
     DmFracMin[enduse,Electric,tech,ec,CA,year] = 
       DmFracMin[enduse,Electric,tech,ec,CA,year-1]+
         (DmFracMin[enduse,Electric,tech,ec,CA,Yr(2045)]-
-          DmFracMin[enduse,Electric,tech,ec,CA,Yr(2030)])/(2045-2030)
+          DmFracMin[enduse,Electric,tech,ec,CA,Yr(2031)])/(2045-2030)
   end
 
   years = collect(Yr(2022):Final)
@@ -102,7 +101,6 @@ function IndPolicy(db)
   end
 
   WriteDisk(db,"$Input/DmFracMin",DmFracMin);
-  WriteDisk(db,"$Input/xDmFrac",xDmFrac);
 end
 
 function PolicyControl(db)
