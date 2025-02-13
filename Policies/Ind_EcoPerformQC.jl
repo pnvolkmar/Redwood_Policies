@@ -4,7 +4,7 @@
 # Quebec's EcoPerformance Program. RW 08/01/2019
 # Includes federal bonification from LCEF leadership funds
 # GHG/Energy reductions and investment data from 
-# TEQ-ClasseurderapportdesGES - ÉcoPerf.xlsx (RW 06/02/2021)
+# TEQ-ClasseurderapportdesGES - �coPerf.xlsx (RW 06/02/2021)
 # Updated program costs and tuning adjustment factors (RST 06Sept2022)
 #
 
@@ -82,7 +82,7 @@ function AllocateReduction(data::IControl,enduses,techs,ecs,areas,years)
   #  
   for year in years, area in areas
     DmdTotal[area,year] = 
-      sum(DmdRef[eu,tech,ec,area,year] for ec in ecs,tech in techs,eu in enduses)
+      sum(DmdRef[enduse,tech,ec,area,year] for ec in ecs, tech in techs, enduse in enduses)
   end
 
   #
@@ -96,10 +96,10 @@ function AllocateReduction(data::IControl,enduses,techs,ecs,areas,years)
   end
 
   #
-  # Fraction Energy Removed each Year
+  # Fraction Removed each Year
   #  
   for year in years, area in areas
-    @finite_math FractionRemovedAnnually[area,year] = ReductionAdditional[area,year] / 
+    @finite_math FractionRemovedAnnually[area,year] = ReductionAdditional[area,year]/ 
       DmdTotal[area,year]
   end
 
@@ -108,33 +108,20 @@ function AllocateReduction(data::IControl,enduses,techs,ecs,areas,years)
   #  
   for year in years, area in areas, ec in ecs, tech in techs, enduse in enduses
     PERRRExo[enduse,tech,ec,area,year] = PERRRExo[enduse,tech,ec,area,year] +
-      PERRef[enduse,tech,ec,area,year] * FractionRemovedAnnually[area,year]
+      (PERRef[enduse,tech,ec,area,year]*FractionRemovedAnnually[area,year])
   end
 
   WriteDisk(db,"$Outpt/PERRRExo",PERRRExo)
 
-  #
-  # Split out PolicyCost using reference Dmd values. PInv only uses Process Heat.
-  #  
-  for year in years, area in areas, ec in ecs, tech in techs
-    for eu in enduses
-      @finite_math DmdFrac[eu,tech,ec,area,year] = DmdRef[eu,tech,ec,area,year]/
-        DmdTotal[area,year]
-    end
-    
-    Heat = Select(Enduse,"Heat")
-    PInvExo[Heat,tech,ec,area,year] = PInvExo[Heat,tech,ec,area,year]+
-      sum(PolicyCost[area,year]*DmdFrac[eu,tech,ec,area,year] for eu in enduses)
-  end
-
-  WriteDisk(db,"$Input/PInvExo",PInvExo)
-end
+  return
+  
+end # AllocateReduction
 
 function IndPolicy(db)
   data = IControl(; db)
   (; Area,EC,Enduses) = data
   (; Nation,Tech) = data
-  (; AnnualAdjustment) = data
+  (; AnnualAdjustment,DmdFrac,DmdRef,DmdTotal) = data
   (; PolicyCost,ReductionAdditional,xInflation) = data
 
   @. AnnualAdjustment = 1.0
@@ -146,35 +133,15 @@ function IndPolicy(db)
   #
   # Provincial TJ reductions by fuel share, Read ReductionAdditional(Area,Year)
   #  
-  ReductionAdditional[QC,Yr(2022)] = 1335
-  ReductionAdditional[QC,Yr(2023)] = 1335
-  ReductionAdditional[QC,Yr(2024)] = 1335
-  ReductionAdditional[QC,Yr(2025)] = 1335
-  ReductionAdditional[QC,Yr(2026)] = 1335
-  ReductionAdditional[QC,Yr(2027)] = 1335
-  ReductionAdditional[QC,Yr(2028)] = 1335
-  ReductionAdditional[QC,Yr(2029)] = 1335
-  ReductionAdditional[QC,Yr(2030)] = 1335
-  ReductionAdditional[QC,Yr(2031)] = 1335
-  ReductionAdditional[QC,Yr(2032)] = 1335
-  ReductionAdditional[QC,Yr(2033)] = 1335
-  ReductionAdditional[QC,Yr(2034)] = 1335
-  ReductionAdditional[QC,Yr(2035)] = 1335
-  ReductionAdditional[QC,Yr(2036)] = 1335
-  ReductionAdditional[QC,Yr(2037)] = 1335
-  ReductionAdditional[QC,Yr(2038)] = 1335
-  ReductionAdditional[QC,Yr(2039)] = 1335
-  ReductionAdditional[QC,Yr(2040)] = 1335
-  ReductionAdditional[QC,Yr(2041)] = 1335
-  ReductionAdditional[QC,Yr(2042)] = 1335
-  ReductionAdditional[QC,Yr(2043)] = 1335
-  ReductionAdditional[QC,Yr(2044)] = 1335
-  ReductionAdditional[QC,Yr(2045)] = 1335
-  ReductionAdditional[QC,Yr(2046)] = 1335
-  ReductionAdditional[QC,Yr(2047)] = 1335
-  ReductionAdditional[QC,Yr(2048)] = 1335
-  ReductionAdditional[QC,Yr(2049)] = 1335
-  ReductionAdditional[QC,Yr(2050)] = 1335
+  ReductionAdditional[QC,Yr(2023)] = 2641
+  ReductionAdditional[QC,Yr(2024)] = 5282
+  ReductionAdditional[QC,Yr(2025)] = 1182
+  ReductionAdditional[QC,Yr(2026)] = 19017
+  ReductionAdditional[QC,Yr(2027)] = 27049
+  years = collect(Yr(2028):Yr(2050))
+  for year in years
+    ReductionAdditional[QC,year] = 36182
+  end
 
   #
   # Select Sets for Policy
@@ -182,42 +149,42 @@ function IndPolicy(db)
   CN = Select(Nation,"CN")
   areas = Select(Area,"QC")
   ecs = Select(EC,!=("OnFarmFuelUse"))
-  techs = Select(Tech,["Coal","Oil"])
 
   #
   # Apply an annual adjustment to reductions to compensate for 'rebound' from less retirements
   #  
-  AnnualAdjustment[QC,Yr(2022)] = 1.0
-  AnnualAdjustment[QC,Yr(2023)] = 1.119
-  AnnualAdjustment[QC,Yr(2024)] = 1.197
-  AnnualAdjustment[QC,Yr(2025)] = 1.275
-  AnnualAdjustment[QC,Yr(2026)] = 1.353
-  AnnualAdjustment[QC,Yr(2027)] = 1.433
-  AnnualAdjustment[QC,Yr(2028)] = 1.512
-  AnnualAdjustment[QC,Yr(2029)] = 1.591
-  AnnualAdjustment[QC,Yr(2030)] = 1.671
-  AnnualAdjustment[QC,Yr(2031)] = 1.75
-  AnnualAdjustment[QC,Yr(2032)] = 1.83
-  AnnualAdjustment[QC,Yr(2033)] = 1.909
-  AnnualAdjustment[QC,Yr(2034)] = 1.987
-  AnnualAdjustment[QC,Yr(2035)] = 2.066
-  AnnualAdjustment[QC,Yr(2036)] = 2.145
-  AnnualAdjustment[QC,Yr(2037)] = 2.223
-  AnnualAdjustment[QC,Yr(2038)] = 2.301
-  AnnualAdjustment[QC,Yr(2039)] = 2.379
-  AnnualAdjustment[QC,Yr(2040)] = 2.456
-  AnnualAdjustment[QC,Yr(2041)] = 2.534
-  AnnualAdjustment[QC,Yr(2042)] = 2.61
-  AnnualAdjustment[QC,Yr(2043)] = 2.687
-  AnnualAdjustment[QC,Yr(2044)] = 2.765
-  AnnualAdjustment[QC,Yr(2045)] = 2.84
-  AnnualAdjustment[QC,Yr(2046)] = 2.917
-  AnnualAdjustment[QC,Yr(2047)] = 2.994
-  AnnualAdjustment[QC,Yr(2048)] = 3.069
-  AnnualAdjustment[QC,Yr(2049)] = 3.146
-  AnnualAdjustment[QC,Yr(2050)] = 3.221
+  AnnualAdjustment[QC,Yr(2023)] = 1.250
+  AnnualAdjustment[QC,Yr(2024)] = 1.280
+  AnnualAdjustment[QC,Yr(2025)] = 2.500
+  AnnualAdjustment[QC,Yr(2026)] = 1.000
+  AnnualAdjustment[QC,Yr(2027)] = 1.050
+  AnnualAdjustment[QC,Yr(2028)] = 0.920
+  AnnualAdjustment[QC,Yr(2029)] = 1.000
+  AnnualAdjustment[QC,Yr(2030)] = 1.060
+  AnnualAdjustment[QC,Yr(2031)] = 1.140
+  AnnualAdjustment[QC,Yr(2032)] = 1.220
+  AnnualAdjustment[QC,Yr(2033)] = 1.300
+  AnnualAdjustment[QC,Yr(2034)] = 1.380
+  AnnualAdjustment[QC,Yr(2035)] = 1.460
+  AnnualAdjustment[QC,Yr(2036)] = 1.540
+  AnnualAdjustment[QC,Yr(2037)] = 1.620
+  AnnualAdjustment[QC,Yr(2038)] = 1.800
+  AnnualAdjustment[QC,Yr(2039)] = 1.900
+  AnnualAdjustment[QC,Yr(2040)] = 2.000
+  AnnualAdjustment[QC,Yr(2041)] = 2.034
+  AnnualAdjustment[QC,Yr(2042)] = 2.11
+  AnnualAdjustment[QC,Yr(2043)] = 2.187
+  AnnualAdjustment[QC,Yr(2044)] = 2.265
+  AnnualAdjustment[QC,Yr(2045)] = 2.34
+  AnnualAdjustment[QC,Yr(2046)] = 2.417
+  AnnualAdjustment[QC,Yr(2047)] = 2.494
+  AnnualAdjustment[QC,Yr(2048)] = 2.569
+  AnnualAdjustment[QC,Yr(2049)] = 2.646
+  AnnualAdjustment[QC,Yr(2050)] = 2.721
 
-  years = collect(Yr(2022):Yr(2050))
+  years = collect(Yr(2023):Yr(2050))
+  techs = Select(Tech,["Coal","Oil","Gas"])
+
   for year in years, area in areas
     ReductionAdditional[area,year] = ReductionAdditional[area,year]/
       1054.61*AnnualAdjustment[area,year]
@@ -230,18 +197,35 @@ function IndPolicy(db)
   #
   # Program Costs $M,Read PolicyCost(Area,Year), EcoPerformance Industry Standard + EcoPerformance Large Emitters Bonus
   #
-  PolicyCost[QC,Yr(2022)] = 145
-  PolicyCost[QC,Yr(2023)] = 187
-  PolicyCost[QC,Yr(2024)] = 180
-  PolicyCost[QC,Yr(2025)] = 163
-  PolicyCost[QC,Yr(2026)] = 160
+  PolicyCost[QC,Yr(2023)] = 81
+  PolicyCost[QC,Yr(2024)] = 163
+  PolicyCost[QC,Yr(2025)] = 204
+  PolicyCost[QC,Yr(2026)] = 220
+  PolicyCost[QC,Yr(2027)] = 247
+  PolicyCost[QC,Yr(2028)] = 281
 
-  years = collect(Yr(2022):Yr(2050))
+  years = collect(Yr(2023):Yr(2026))
   for year in years, area in areas
     PolicyCost[area,year] = PolicyCost[area,year]/xInflation[area,year]
   end
+
+  #
+  # Split out PolicyCost using reference Dmd values. PInv only uses Process Heat.
+  #  
+  for year in years, area in areas, ec in ecs, tech in techs, enduse in Enduses
+    @finite_math DmdFrac[enduse,tech,ec,area,year] = DmdRef[enduse,tech,ec,area,year]/
+      DmdTotal[area,year]
+  end
+    
+  Heat = Select(Enduse,"Heat")
+  for year in years, area in areas, ec in ecs, tech in techs
+    PInvExo[Heat,tech,ec,area,year] = PInvExo[Heat,tech,ec,area,year]+
+      sum(PolicyCost[area,year]*DmdFrac[enduse,tech,ec,area,year] for enduse in Enduses)
+  end
+
+  WriteDisk(db,"$Input/PInvExo",PInvExo)
   
-end
+end #IndPolicy
 
 function PolicyControl(db)
   @info "Ind_EcoPerformQC.jl - PolicyControl"

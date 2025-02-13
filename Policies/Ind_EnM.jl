@@ -68,20 +68,13 @@ Base.@kwdef struct IControl
   ReductionTotal::VariableArray{1} = zeros(Float64,length(Year)) # [Year] Demand Reduction from this Policy Cumulative over Years (TBtu/Yr)
 end
 
-function AllocateReduction(data,enduses,techs,ecs,years,areas)
+function AllocateReduction(data,DmdTotal,enduses,techs,ecs,years,areas)
   (; db,Outpt) = data
   (; DERRef) = data
   (; DERRRExo,DmdRef) = data
-  (; DmdTotal,FractionRemovedAnnually) = data
+  (; FractionRemovedAnnually) = data
   (; ReductionAdditional,ReductionTotal) = data
 
-  #
-  # Total Demands
-  #  
-  for year in years
-    DmdTotal[year] = sum(DmdRef[enduse,tech,ec,area,year] for tech in techs,
-      ec in ecs, area in areas, enduse in enduses)
-  end
 
   #
   # Accumulate ReductionAdditional and apply to reference case demands
@@ -94,7 +87,7 @@ function AllocateReduction(data,enduses,techs,ecs,years,areas)
   end
 
   #
-  # Fraction Energy Removed each Year
+  # Fraction Removed each Year
   #  
   for year in years
     @finite_math FractionRemovedAnnually[year] = 
@@ -110,30 +103,44 @@ function AllocateReduction(data,enduses,techs,ecs,years,areas)
   end
 
   WriteDisk(db,"$Outpt/DERRRExo",DERRRExo)
-end
+
+end #AllocateReduction
 
 function IndPolicy(db)
   data = IControl(; db)
   (; Input) = data
-  (; EC,Enduse) = data
+  (; EC,ECs,Enduse) = data
   (; Nation,Tech) = data
   (; ANMap,AnnualAdjustment) = data
   (; DInvExo,DmdFrac,DmdRef,DmdTotal) = data
-  (; PolicyCost) = data
-  (; ReductionAdditional,xInflation) = data
+  (; PolicyCost,ReductionAdditional,xInflation) = data
 
-  ReductionAdditional[Yr(2022)] = 23
-  ReductionAdditional[Yr(2023)] = 39
-  ReductionAdditional[Yr(2024)] = 55
-  ReductionAdditional[Yr(2025)] = 73
-  ReductionAdditional[Yr(2026)] = 92
-  ReductionAdditional[Yr(2027)] = 105
-  ReductionAdditional[Yr(2028)] = 109
-  ReductionAdditional[Yr(2029)] = 113
-  ReductionAdditional[Yr(2030)] = 117
+  #
+  # Select Sets for Policy
+  #
+  CN = Select(Nation,"CN");
+  areas = findall(ANMap[:,CN] .== 1.0)
+  enduses = Select(Enduse,"Heat")
+  Heat = Select(Enduse,"Heat")
+  #
+  # Policy results is a reduction in demand (PJ) converted to TBtu
+  #
+  years = collect(Yr(2022):Yr(2050))
+
+  #
+  # Read ReductionAdditional
+  #
+  ReductionAdditional[Yr(2023)] = 15.94
+  ReductionAdditional[Yr(2024)] = 31.89
+  ReductionAdditional[Yr(2025)] = 47.83
+  ReductionAdditional[Yr(2026)] = 63.78
+  ReductionAdditional[Yr(2027)] = 79.72
+  ReductionAdditional[Yr(2028)] = 86.33
+  ReductionAdditional[Yr(2029)] = 93.94
+  
   years = collect(Yr(2030):Yr(2050))
   for year in years
-    ReductionAdditional[year] = 117
+    ReductionAdditional[year] = 101.05
   end
 
   #
@@ -141,23 +148,23 @@ function IndPolicy(db)
   #  
   AnnualAdjustment[Yr(2022)] = 1
   AnnualAdjustment[Yr(2023)] = 1.103
-  AnnualAdjustment[Yr(2024)] = 1.167
-  AnnualAdjustment[Yr(2025)] = 1.232
-  AnnualAdjustment[Yr(2026)] = 1.30
-  AnnualAdjustment[Yr(2027)] = 1.387
-  AnnualAdjustment[Yr(2028)] = 1.505
-  AnnualAdjustment[Yr(2029)] = 1.631
-  AnnualAdjustment[Yr(2030)] = 1.744
-  AnnualAdjustment[Yr(2031)] = 1.884
-  AnnualAdjustment[Yr(2032)] = 2.024
-  AnnualAdjustment[Yr(2033)] = 2.185
-  AnnualAdjustment[Yr(2034)] = 2.303
-  AnnualAdjustment[Yr(2035)] = 2.442
-  AnnualAdjustment[Yr(2036)] = 2.265
-  AnnualAdjustment[Yr(2037)] = 2.399
-  AnnualAdjustment[Yr(2038)] = 2.53
-  AnnualAdjustment[Yr(2039)] = 2.664
-  AnnualAdjustment[Yr(2040)] = 2.796
+  AnnualAdjustment[Yr(2024)] = 1.127
+  AnnualAdjustment[Yr(2025)] = 1.182
+  AnnualAdjustment[Yr(2026)] = 1.250
+  AnnualAdjustment[Yr(2027)] = 1.337
+  AnnualAdjustment[Yr(2028)] = 1.385
+  AnnualAdjustment[Yr(2029)] = 1.511
+  AnnualAdjustment[Yr(2030)] = 1.624
+  AnnualAdjustment[Yr(2031)] = 1.764
+  AnnualAdjustment[Yr(2032)] = 1.904
+  AnnualAdjustment[Yr(2033)] = 2.065
+  AnnualAdjustment[Yr(2034)] = 2.283
+  AnnualAdjustment[Yr(2035)] = 2.342
+  AnnualAdjustment[Yr(2036)] = 2.485
+  AnnualAdjustment[Yr(2037)] = 2.649
+  AnnualAdjustment[Yr(2038)] = 2.840
+  AnnualAdjustment[Yr(2039)] = 2.940
+  AnnualAdjustment[Yr(2040)] = 3.060
   AnnualAdjustment[Yr(2041)] = 2.897
   AnnualAdjustment[Yr(2042)] = 3.05
   AnnualAdjustment[Yr(2043)] = 3.189
@@ -169,18 +176,24 @@ function IndPolicy(db)
   AnnualAdjustment[Yr(2049)] = 4.028
   AnnualAdjustment[Yr(2050)] = 4.174
   
-  @. ReductionAdditional = ReductionAdditional / 1.05461*AnnualAdjustment;
-
-  CN = Select(Nation,"CN");
-  areas = findall(ANMap[:,CN] .== 1.0);
-  ecs = collect(Select(EC))
-  enduses = Select(Enduse,"Heat");
   tech_e = Select(Tech,!=("Electric"))
   tech_s = Select(Tech,!=("Steam"))
   techs = intersect(tech_e,tech_s)
-  years = collect(Yr(2022):Yr(2050));
 
-  AllocateReduction(data,enduses,techs,ecs,years,areas);
+  #
+  # Total Demands
+  #  
+  for year in years
+    DmdTotal[year] = sum(DmdRef[Heat,tech,ec,area,year] for tech in techs,
+      ec in ECs, area in areas)
+  end
+
+  for year in years
+    ReductionAdditional[year] = ReductionAdditional[year]/1.05461*AnnualAdjustment[year]
+  end
+
+
+  AllocateReduction(data,DmdTotal,enduses,techs,ECs,years,areas)
 
   #
   # Program Costs
@@ -198,12 +211,14 @@ function IndPolicy(db)
   #
   # Split out PolicyCost using reference Dmd values. PInv only uses Process Heat.
   #
-  for enduse in enduses, tech in techs, ec in ecs, area in areas, year in years
-    @finite_math DmdFrac[enduse,tech,ec,area,year] = DmdRef[enduse,tech,ec,area,year]/
+  for year in years, area in areas, ec in ECs, tech in techs
+    @finite_math DmdFrac[Heat,tech,ec,area,year] = DmdRef[Heat,tech,ec,area,year]/
       DmdTotal[year]
 
-    DInvExo[enduse,tech,ec,area,year] = DInvExo[enduse,tech,ec,area,year]+
-      PolicyCost[year]*DmdFrac[enduse,tech,ec,area,year]/xInflation[area,Yr(2015)]
+  end
+  for year in years, area in areas, ec in ECs, tech in techs
+    DInvExo[Heat,tech,ec,area,year] = DInvExo[Heat,tech,ec,area,year]+
+      (PolicyCost[year]*DmdFrac[Heat,tech,ec,area,year])/xInflation[area,Yr(2015)]
   end
 
   WriteDisk(db,"$Input/DInvExo",DInvExo)
