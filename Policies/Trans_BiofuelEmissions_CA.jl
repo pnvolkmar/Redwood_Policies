@@ -71,12 +71,15 @@ function TransPolicy(db)
   for year in years, poll in Polls, ec in ECs, tech in Techs
     POCX[1,Ethanol,tech,ec,poll,CA,year] = 0.0
   end
-
-  years = collect(Future:Yr(2029))
+  # TODO Promula: This overwrites the 0 values in 2030 with values near 0 but 
+  # not exactly zero due to rounding in PROMULA
+  # To match up precisely, we're better of leaving the 2030 values in the loop below
+  # in Promula
+  years = collect(Future:Yr(2030))
   for year in years, poll in Polls, ec in ECs, tech in Techs
     POCX[1,Ethanol,tech,ec,poll,CA,year] = POCX[1,Ethanol,tech,ec,poll,CA,year-1]+
       (POCX[1,Ethanol,tech,ec,poll,CA,Yr(2030)]-POCX[1,Ethanol,tech,ec,poll,CA,Last])/
-      (2030-HisTime)
+      (Yr(2030)-Last)
   end
 
   #
@@ -87,14 +90,14 @@ function TransPolicy(db)
 
   years = collect(Yr(2030):Final)
   for year in years, poll in Polls, ec in ECs, tech in Techs
-    POCX[1,Ethanol,tech,ec,poll,CA,year] = 0.0
+    POCX[1,Biodiesel,tech,ec,poll,CA,year] = 0.0
   end
 
-  years = collect(Future:Yr(2029))
+  years = collect(Future:Yr(2030))
   for year in years, poll in Polls, ec in ECs, tech in Techs
-    POCX[1,Ethanol,tech,ec,poll,CA,year] = POCX[1,Ethanol,tech,ec,poll,CA,year-1]+
-      (POCX[1,Ethanol,tech,ec,poll,CA,Yr(2030)]-POCX[1,Ethanol,tech,ec,poll,CA,Last])/
-      (2030-HisTime)
+    POCX[1,Biodiesel,tech,ec,poll,CA,year] = POCX[1,Biodiesel,tech,ec,poll,CA,year-1]+
+      (POCX[1,Biodiesel,tech,ec,poll,CA,Yr(2030)]-POCX[1,Biodiesel,tech,ec,poll,CA,Last])/
+      (Yr(2030)-Last)
   end
 
   WriteDisk(db,"$Input/POCX",POCX)

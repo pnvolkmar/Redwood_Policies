@@ -66,6 +66,7 @@ Base.@kwdef struct RControl
 
   # Scratch Variables
   DPLGoal::VariableArray{5} = zeros(Float64,length(Enduse),length(Tech),length(EC),length(Area),length(Year)) # [Enduse,Tech,EC,Area,Year] Physical Life of Equipment Goal (Years)
+  LnInfinity::Float64 = 85.19565 # Value from Promula
 end
 
 function ResPolicy(db)
@@ -74,7 +75,7 @@ function ResPolicy(db)
   (; Area,CTechs,ECs) = data
   (; Enduse,Enduses) = data
   (; PI,Tech,Techs,Years) = data
-  (; CFraction,CMSM0,CnvrtEU,DPL,DPLGoal) = data
+  (; CFraction,CMSM0,CnvrtEU,DPL,DPLGoal,LnInfinity) = data
   (; Endogenous,Exogenous,MMSM0,xCMSF,xMMSF,xProcSw,xProcSwS,xXProcSw) = data
 
   CA = Select(Area,"CA")
@@ -118,7 +119,7 @@ function ResPolicy(db)
     if CFraction[enduse,tech,ec,CA,year] == 1
       CMSM0[enduse,tech,ctech,ec,CA,year] = MMSM0[enduse,tech,ec,CA,Yr(2021)]
     else 
-      CMSM0[enduse,tech,ctech,ec,CA,year] = -170.39
+      CMSM0[enduse,tech,ctech,ec,CA,year] = -2*LnInfinity
     end
     
   end
@@ -132,7 +133,7 @@ function ResPolicy(db)
   tech = Select(Tech,"HeatPump")
   #
   for enduse in enduses, ctech in CTechs, ec in ECs
-    years = collect(Yr(2030):Final)
+    years = Yr(2030)
     for year in years
       xCMSF[enduse,tech,ctech,ec,CA,year] = 0.8
     end
@@ -141,10 +142,12 @@ function ResPolicy(db)
     for year in years
       xCMSF[enduse,tech,ctech,ec,CA,year] = 1.0
     end   
+  end
     
-    #
-    # Interpolate from 2021
-    #  
+  #
+  # Interpolate from 2021
+  #  
+  for enduse in enduses, ctech in CTechs, ec in ECs
     xCMSF[enduse,tech,ctech,ec,CA,Yr(2021)] = xMMSF[enduse,tech,ec,CA,Yr(2021)]
     years = collect(Yr(2022):Yr(2029))
     for year in years
@@ -169,7 +172,7 @@ function ResPolicy(db)
   enduses = Select(Enduse,["HW","OthSub"])
   #
   for enduse in enduses, ctech in CTechs, ec in ECs
-    years = collect(Yr(2030):Final)
+    years = Yr(2030)
     for year in years
       xCMSF[enduse,tech,ctech,ec,CA,year] = 0.8
     end
@@ -178,10 +181,12 @@ function ResPolicy(db)
     for year in years
       xCMSF[enduse,tech,ctech,ec,CA,year] = 1.0
     end  
-    
-    #
-    # Interpolate from 2021
-    #   
+  end
+  
+  #
+  # Interpolate from 2021
+  #   
+  for enduse in enduses, ctech in CTechs, ec in ECs
     xCMSF[enduse,tech,ctech,ec,CA,Yr(2021)] = xMMSF[enduse,tech,ec,CA,Yr(2021)]
     years = collect(Yr(2022):Yr(2029))
     for year in years
@@ -214,7 +219,7 @@ function ResPolicy(db)
   
     years = collect(Yr(2045):Yr(2050))
     for year in years
-      DPLGoal[enduse,tech,ec,CA,year] = 1.5
+      DPLGoal[enduse,tech,ec,CA,year] = 1.0
     end
 
     years = collect(Yr(2036):Yr(2044))
@@ -224,7 +229,7 @@ function ResPolicy(db)
           (2045-2035))
     end
     
-    for year in Years
+    for year in years
       DPL[enduse,tech,ec,CA,year] = DPLGoal[enduse,tech,ec,CA,year]
     end  
     

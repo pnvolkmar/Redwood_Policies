@@ -144,7 +144,7 @@ function TransPolicy(db)
   # *
   
   for enduse in Enduses,tech in Techs,ctech in CTechs,year in years
-    if CFrac[enduse,tech,ctech,Passenger,CA,year] == 1.0
+    if CFraction[enduse,tech,Passenger,CA,year] == 1.0
       CMSM0[enduse,tech,ctech,Passenger,CA,year] = MMSM0[enduse,tech,Passenger,CA,year]
     else
       CMSM0[enduse,tech,ctech,Passenger,CA,year] = -170.39
@@ -176,7 +176,7 @@ function TransPolicy(db)
 
   years = collect(Yr(2045):Yr(2050))
   for year in years, tech in techs, enduse in Enduses
-    DPLGoal[enduse,tech,Passenger,CA,year] = 1.5
+    DPLGoal[enduse,tech,Passenger,CA,year] = 1.0
   end
 
   years = collect(Yr(2036):Yr(2044))
@@ -186,7 +186,8 @@ function TransPolicy(db)
           DPLGoal[enduse,tech,Passenger,CA,Yr(2035)] )/(2045-2035)
   end
   
-  years = collect(Future:Final)
+  # years = collect(Future:Final) # TODO Promula this should probably be for all
+  # years but the PROMULA code just has 2036-2044
   for year in years, tech in techs, enduse in Enduses
     DPL[enduse,tech,Passenger,CA,year] = DPLGoal[enduse,tech,Passenger,CA,year]
   end

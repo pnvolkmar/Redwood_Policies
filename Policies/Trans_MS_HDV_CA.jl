@@ -73,7 +73,7 @@ function TransPolicy(db)
   techs = Select(Tech,(from="HDV2B3Gasoline",to="HDV2B3FuelCell"))
   years = collect(Yr(2040):Final)
   for year in years
-    MSFPVBase[CA,year] = sum(xMMSF[enduse,tech,Freight,CA,year] for tech in Techs)
+    MSFPVBase[CA,year] = sum(xMMSF[enduse,tech,Freight,CA,year] for tech in techs)
   end
   #
   HDV2B3Electric = Select(Tech,"HDV2B3Electric")
@@ -103,7 +103,7 @@ function TransPolicy(db)
   techs = Select(Tech,(from="HDV45Gasoline",to="HDV45FuelCell"))
   years = collect(Yr(2040):Final)
   for year in years
-    MSFPVBase[CA,year] = sum(xMMSF[enduse,tech,Freight,CA,year] for tech in Techs)
+    MSFPVBase[CA,year] = sum(xMMSF[enduse,tech,Freight,CA,year] for tech in techs)
   end
   #
   HDV45Electric = Select(Tech,"HDV45Electric")
@@ -133,7 +133,7 @@ function TransPolicy(db)
   techs = Select(Tech,(from="HDV67Gasoline",to="HDV67FuelCell"))
   years = collect(Yr(2040):Final)
   for year in years
-    MSFPVBase[CA,year] = sum(xMMSF[enduse,tech,Freight,CA,year] for tech in Techs)
+    MSFPVBase[CA,year] = sum(xMMSF[enduse,tech,Freight,CA,year] for tech in techs)
   end
   #
   HDV67FuelCell = Select(Tech,"HDV67FuelCell")
@@ -163,7 +163,11 @@ function TransPolicy(db)
   techs = Select(Tech,(from="HDV8Gasoline",to="HDV8FuelCell"))
   years = collect(Yr(2040):Final)
   for year in years
-    MSFPVBase[CA,year] = sum(xMMSF[enduse,tech,Freight,CA,year] for tech in Techs)
+    MSFPVBase[CA,year] = sum(xMMSF[enduse,tech,Freight,CA,year] for tech in techs)
+  end
+  for tech in techs
+    loc1 = xMMSF[enduse,tech,Freight,CA,Yr(2040)]
+    print("\n", "Tech: ", tech, "xMMSF: ", loc1)
   end
   #
   HDV8FuelCell = Select(Tech,"HDV8FuelCell")
@@ -204,7 +208,7 @@ function TransPolicy(db)
   
   years = collect(Yr(2045):Yr(2050))
   for year in years, tech in techs
-    DPLGoal[enduse,tech,Freight,CA,year] = 1.5
+    DPLGoal[enduse,tech,Freight,CA,year] = 1.0
   end
   
   years = collect(Yr(2030):Yr(2044))
@@ -214,7 +218,8 @@ function TransPolicy(db)
         (2045-2029)
   end
     
-  years = collect(Yr(2030):Yr(2044))
+  # years = collect(Yr(2030):Yr(2050)) # TODO Promula: Ensure AMD wants only 
+  # 2030-2044 written into DPL
   for year in years, tech in techs
     DPL[enduse,tech,Freight,CA,year] = DPLGoal[enduse,tech,Freight,CA,year]
   end

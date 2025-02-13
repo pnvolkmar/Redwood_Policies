@@ -4,7 +4,7 @@
 # Input direct energy savings and expenditures provided by Ontario
 # see ON_CDM_DSM3.xlsx (RW 09/16/2021)
 #
-# Last updated by Kevin Palmer-Wilson on 2023-06-09
+# Last updated by Yang Li on 2024-08-12
 #
 
 using SmallModel
@@ -54,22 +54,16 @@ Base.@kwdef struct CControl
   CERSM::VariableArray{4} = ReadDisk(db,"$CalDB/CERSM") # [Enduse,EC,Area,Year] Capital Energy Requirement (Btu/Btu)
   DEEARef::VariableArray{5} = ReadDisk(BCNameDB,"$Outpt/DEEA") # [Enduse,Tech,EC,Area,Year] Average Device Efficiency (Btu/Btu)
   DmdRef::VariableArray{5} = ReadDisk(BCNameDB,"$Outpt/Dmd") # [Enduse,Tech,EC,Area,Year] Demand (TBtu/Yr)
-  DmFracMax::VariableArray{6} = ReadDisk(db,"$Input/DmFracMax") # [Enduse,Fuel,Tech,EC,Area,Year] Demand Fuel/Tech Fraction Maximum (Btu/Btu)
-  DmFracMin::VariableArray{6} = ReadDisk(db,"$Input/DmFracMin") # [Enduse,Fuel,Tech,EC,Area,Year] Demand Fuel/Tech Fraction Minimum (Btu/Btu)
   ECUF::VariableArray{3} = ReadDisk(db,"MOutput/ECUF") # [ECC,Area,Year] Capital Utilization Fraction
   PER::VariableArray{5} = ReadDisk(db,"$Outpt/PER") # [Enduse,Tech,EC,Area,Year] Process Energy Requirement (mmBtu/Yr)
   PERReduction::VariableArray{5} = ReadDisk(db,"$Input/PERReduction") # [Enduse,Tech,EC,Area,Year] Fraction of Process Energy Removed after this Policy is added ((mmBtu/Yr)/(mmBtu/Yr))
   # PERReductionStart::VariableArray{5} = ReadDisk(db,"$Input/PERReductionStart") # [Enduse,Tech,EC,Area,Year] Fraction of Process Energy Removed from Previous Policies ((mmBtu/Yr)/(mmBtu/Yr))
   PERRRExo::VariableArray{5} = ReadDisk(BCNameDB,"$Outpt/PERRRExo") # [Enduse,Tech,EC,Area,Year] Process Energy Exogenous Retrofits ((mmBtu/Yr)/Yr)
   PInvExo::VariableArray{5} = ReadDisk(db,"$Input/PInvExo") # [Enduse,Tech,EC,Area,Year] Process Exogenous Investments (M$/Yr)
-  xDmFrac::VariableArray{6} = ReadDisk(db,"$Input/xDmFrac") # [Enduse,Fuel,Tech,EC,Area,Year] Energy Demands Fuel/Tech Split (Btu/Btu)
   xInflation::VariableArray{2} = ReadDisk(db,"MInput/xInflation") # [Area,Year] Inflation Index ($/$)
 
   # Scratch Variables
   AnnualAdjustment::VariableArray{2} = zeros(Float64,length(Tech),length(Year)) # [Tech,Year] Adjustment for energy savings rebound
-  DmFracExcluded::VariableArray{4} = zeros(Float64,length(Enduse),length(EC),length(Area),length(Year)) # [Enduse,EC,Area,Year] Total DmFrac for Fuels Excluded from Policy (Btu/Btu/Yr)
-  DmFracGR::VariableArray{4} = zeros(Float64,length(Enduse),length(Fuel),length(EC),length(Area)) # [Enduse,Fuel,EC,Area] Growth Rate in Demand Fuel Fraction (Btu/Btu/Yr)
-  DmFracIncluded::VariableArray{4} = zeros(Float64,length(Enduse),length(EC),length(Area),length(Year)) # [Enduse,EC,Area,Year] Total DmFrac for Fuels Included in Policy (Btu/Btu/Yr)
   DmdSavings::VariableArray{4} = zeros(Float64,length(Enduse),length(Tech),length(EC),length(Area)) # [Enduse,Tech,EC,Area] Demand Reductions after this Policy is added (TBtu/Yr)
   DmdSavingsAdditional::VariableArray{4} = zeros(Float64,length(Enduse),length(Tech),length(EC),length(Area)) # [Enduse,Tech,EC,Area] Demand Reductions from this Policy (TBtu/Yr)
   DmdSavingsStart::VariableArray{4} = zeros(Float64,length(Enduse),length(Tech),length(EC),length(Area)) # [Enduse,Tech,EC,Area] Demand Reductions from Previous Policies (TBtu/Yr)
@@ -150,14 +144,15 @@ function ComPolicy(db)
   area = Select(Area,"ON")
   enduses = Select(Enduse,["Heat","AC"])
   tech = Select(Tech,"Gas")
-  years = collect(Yr(2022):Yr(2050))
+  years = collect(Yr(2023):Yr(2050))
+  
   #
   # PJ Reductions in end-use sectors
   #
   #! format: off
   Reduction[tech, years] = [
-    # 2022  2023    2024    2025    2026    2027    2028    2029    2030    2031    2032    2033    2034    2035    2036    2037    2038    2039    2040    2041    2042    2043    2044    2045    2046    2047    2048    2049    2050
-    1.9     2.6     3.3     4.0     4.7     5.4     6.2     6.9     6.7     6.9     7.1     7.3     7.5     7.7     7.9     8.2     8.4     8.6     8.9     9.1     9.4     9.6     9.9     10.2    10.4    10.7    11.0    11.3    11.6
+    # 2023 2024    2025    2026    2027    2028    2029    2030    2031    2032    2033    2034    2035    2036    2037    2038    2039    2040    2041    2042    2043    2044    2045    2046    2047    2048    2049    2050
+    0.7     1.4     2.1     2.8     3.5     4.3     5.0     4.8     5.0     5.2     5.4     5.6     5.8     6.0     6.3     6.5     6.7     7.0     7.2     7.5     7.7     8.0     8.3     8.5     8.8     9.1     9.4     9.7
   ]
   #! format: on
 
@@ -165,7 +160,7 @@ function ComPolicy(db)
     ReductionAdditional[tech,year] = Reduction[tech,year]-Reduction[tech,year-1]
   end
 
-  years = collect(Yr(2022):Yr(2034))
+  years = collect(Yr(2023):Yr(2034))
   for year in years
     Increment[tech,year] = 0.05
   end
@@ -175,7 +170,7 @@ function ComPolicy(db)
     Increment[tech,year] = 0.07
   end
 
-  years = collect(Yr(2022):Yr(2050))
+  years = collect(Yr(2023):Yr(2050))
   for year in years
     AnnualAdjustment[tech,year] = AnnualAdjustment[tech,year-1]+Increment[tech,year]
     ReductionAdditional[tech,year] = ReductionAdditional[tech,year]/
@@ -188,9 +183,9 @@ function ComPolicy(db)
   #
   #! format: off
   Expenses[tech, years] = [
-    # 2022  2023    2024    2025    2026    2027    2028    2029    2030    2031    2032    2033    2034    2035    2036    2037    2038    2039    2040    2041    2042    2043    2044    2045    2046    2047    2048    2049    2050
-    27.1    28.3    29.6    31.0    32.4    33.9    34.6    35.3    36.0    36.7    37.5    38.2    39.0    39.7    40.5    41.4    42.2    43.0    43.9    44.8    45.7    46.6    47.5    48.5    49.4    50.4    51.4    52.4    53.5
-  ]
+    # 2023  2024    2025    2026    2027    2028    2029    2030    2031    2032    2033    2034    2035    2036    2037    2038    2039    2040    2041    2042    2043    2044    2045    2046    2047    2048    2049    2050
+    28.3    29.6    31.0    32.4    33.9    34.6    35.3    36.0    36.7    37.5    38.2    39.0    39.7    40.5    41.4    42.2    43.0    43.9    44.8    45.7    46.6    47.5    48.5    49.4    50.4    51.4    52.4    53.5
+    ]
   for year in years
     Expenses[tech,year] = Expenses[tech,year]/xInflation[area,Yr(2019)]
   end

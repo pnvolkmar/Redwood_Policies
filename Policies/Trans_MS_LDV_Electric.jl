@@ -141,6 +141,13 @@ function TransPolicy(db)
   # Set Territories equal to AB since BC is now an outlier in terms of ZEV market shares
   # Matt Lewis July 12 2019
   #
+  ####################################
+  eu_p = Select(Enduse, "Carriage")
+  t_p  = Select(Tech, "LDVGasoline")
+  ec_p = Select(EC, "Passenger")
+  a_p  = Select(Area, "SK")
+  y_p = Yr(2042)
+  ####################################
   years = collect(Future:Yr(2050))
   techs = Select(Tech,["LDVElectric","LDTElectric","LDVHybrid","LDTHybrid"])
   areas = Select(Area,["NT","NU","YT"])
@@ -158,6 +165,10 @@ function TransPolicy(db)
   for year in years, tech in techs
     MSFTarget[tech,YT,year] = MSFTarget[tech,BC,year]
   end
+  #######################
+  print("\nMSFTarget :", MSFTarget[t_p,a_p,y_p])
+  #######################
+
 
   # 
   # Baseline MarketShare for Personal Vehicles
@@ -169,6 +180,9 @@ function TransPolicy(db)
   for year in years, area in areas, enduse in Enduses
     MSFPVBase[area,year] = sum(xMMSF[enduse,tech,Passenger,area,year] for tech in techs)
   end
+  #######################
+  print("\nMSFPVBase :", MSFPVBase[a_p,y_p])
+  #######################
 
   #
   # Recalculate Market Share TargetEVInput for E2020 passenger market shares
@@ -177,10 +191,17 @@ function TransPolicy(db)
   for year in years, area in areas, tech in techs
     MSFTarget[tech,area,year] = MSFTarget[tech,area,year]*MSFPVBase[area,year]
   end
+  #######################
+  print("\nMSFTarget recalc:", MSFTarget[t_p,a_p,y_p])
+  #######################
+  
 
   for year in years, area in areas
     MSFTargetSum[area,year] = sum(MSFTarget[tech,area,year] for tech in techs)
   end
+  #######################
+  print("\nMSFTargetSum :", MSFTargetSum[a_p,y_p])
+  #######################
 
   #
   # Code below replicates weighting in ZEV_Prov to match existing Ref21 - Ian 08/31/21
@@ -191,6 +212,9 @@ function TransPolicy(db)
   for year in years, area in areas, enduse in Enduses
     ICEMarketShareOld[area,year] = sum(xMMSF[enduse,tech,Passenger,area,year] for tech in techs)
   end
+  #######################
+  print("\n ICEMarketShareOld :", ICEMarketShareOld[a_p,y_p])
+  #######################
 
   techs = Select(Tech,(from = "LDVGasoline",to = "LDTFuelCell"))
   for year in years, area in areas
@@ -204,6 +228,9 @@ function TransPolicy(db)
     xMMSF[enduse,tech,Passenger,area,year] = xMMSF[enduse,tech,Passenger,area,year]*
       ICEMarketChange[area,year]
   end
+  #######################
+  print("\n xMMSF recalc:", xMMSF[eu_p,t_p,ec_p,a_p,y_p])
+  #######################
 
   techs = Select(Tech,["LDVElectric","LDTElectric","LDVHybrid","LDTHybrid"])
   for year in years, area in areas, tech in techs, enduse in Enduses

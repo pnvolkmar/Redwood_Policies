@@ -69,14 +69,14 @@ Base.@kwdef struct RControl
   
   # LocT::VariableArray{1} = zeros(Float64,length(Tech)) # [Tech] Scratch Variable
   MAW::VariableArray{1} = zeros(Float64,length(Tech)) # [Tech] Marginal Allocation Weight
-  # MAWCheck::VariableArray{1} = zeros(Float64,length(Tech)) # [Tech] Marginal Allocation Weight for Checking
-  # MMSFCheck::VariableArray{1} = zeros(Float64,length(Tech)) # [Tech] Market Share Fraction for Checking ($/$)
+  MAWCheck::VariableArray{1} = zeros(Float64,length(Tech)) # [Tech] Marginal Allocation Weight for Checking
+  MMSFCheck::VariableArray{1} = zeros(Float64,length(Tech)) # [Tech] Market Share Fraction for Checking ($/$)
   MMSFx::VariableArray{1} = zeros(Float64,length(Tech)) # [Tech] Target Market Share Fraction ($/$)
   # MSFPolicy     'Sum of Market Shares under Targets ($/$)'
   # MSFReference  'Sum of Market Shares not under Targets ($/$)'
   MU::VariableArray{1} = zeros(Float64,length(Tech)) # [Tech] Local Calibration Variable
   # TAW      'Total Allocation Weight'
-  # TAWCheck 'Total Allocation Weight for Checking'
+  TAWCheck::Float64 = 0.0 # 'Total Allocation Weight for Checking'
   # xMMSFMax 'Maximum Value for xMMSF ($/$)'
 end
 
@@ -106,6 +106,7 @@ function MarketShareNonPriceFactors(data::RControl)
   (; Inflation0,MAW,MCFUBase,MCFU0Base) = data
   (; MMSF,MMSFx,MMSM0,MSMM,MU,MVF) = data
   (; PEE,PEE0Base,xInflation,xMMSF) = data
+  (; MAWCheck,TAWCheck,MMSFCheck) = data
 
   InputData(data)
 
@@ -178,13 +179,21 @@ function MarketShareNonPriceFactors(data::RControl)
       #
       # Check Market Share Calculation, only needed for debugging
       #
-      # Do If (Yrv eq 2020) or (Yrv eq 2030)
-      #   MAWCheck=exp(MMSM0+ln(MSMM)+
-      #                MVF*ln((MCFU/xInflation/PEE)/(MCFU0/Inflation0/PEE0)))
-      #   TAWCheck = sum(Tech)(MAWCheck(Tech))
-      #   MMSFCheck=MAWCheck/TAWCheck
-      # End Do If Yrv
-      #
+      if year == Yr(2020) || year == Yr(2030)
+        for tech in Techs
+          @finite_math MAWCheck[tech] = exp(
+            MMSM0[enduse,tech,ec,area,year]+log(MSMM[enduse,tech,ec,area,year])+
+            MVF[enduse,tech,ec,area,year]*log(
+              (MCFU[enduse,tech,ec,area,year]/xInflation[area,year]/PEE[enduse,tech,ec,area,year])/
+              (MCFU0[enduse,tech,ec,area]/Inflation0[area]/PEE0[enduse,tech,ec,area])
+            )
+          )
+        end
+        TAWCheck = sum(MAWCheck[tech] for tech in Techs)
+        for tech in Techs
+          MMSFCheck[tech] = MAWCheck[tech] /  TAWCheck
+        end
+      end
 
       else
         for tech in Techs

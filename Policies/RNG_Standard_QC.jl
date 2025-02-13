@@ -54,10 +54,6 @@ Base.@kwdef struct IControl
   xDmFrac::VariableArray{6} = ReadDisk(db,"$Input/xDmFrac") # [Enduse,Fuel,Tech,EC,Area,Year] Energy Demands Fuel/Tech Split (Fraction)
   
   # Scratch Variables
-  BDGoal::VariableArray{1} = zeros(Float64,length(Year)) # [Year] Ethanol Goal (Btu/Btu)
-  DmFrXAfter::VariableArray{5} = zeros(Float64,length(Enduse),length(Tech),length(EC),length(Area),length(Year)) # [Enduse,Tech,EC,Area,Year] xDmFrac excluding Biodiesel After Policy (Btu/Btu)
-  DmFrXBefore::VariableArray{5} = zeros(Float64,length(Enduse),length(Tech),length(EC),length(Area),length(Year)) # [Enduse,Tech,EC,Area,Year] xDmFrac excluding Biodiesel Before Policy (Btu/Btu)
-  ETGoal::VariableArray{1} = zeros(Float64,length(Year)) # [Year] Ethanol Goal (Btu/Btu)
   Target::VariableArray{1} = zeros(Float64,length(Year)) # [Year] Policy Fuel Target (Btu/Btu)
 end
 
@@ -70,7 +66,6 @@ function IndPolicy(db)
   (; DmFracMin) = data
   (; Target,xDmFrac) = data
   
-  years = collect(Yr(2022):Yr(2050))
   areas = Select(Area,"QC")
   techs = Select(Tech,"Gas")
   RNG = Select(Fuel,"RNG")
@@ -85,26 +80,16 @@ function IndPolicy(db)
    for year in years
     Target[year] = 0.10
    end
-   
-   Target[Yr(2025)] = 0.050
-   Target[Yr(2024)] = 0.035
-   Target[Yr(2023)] = 0.020
    Target[Yr(2020)] = 0.010
-
-   years = collect(Yr(2021):Yr(2022)) 
+   years = collect(Yr(2021):Yr(2029)) 
    for year in years
-     Target[year] = Target[year-1]+(Target[Yr(2023)]-Target[Yr(2020)])/(2023-2020)
-   end
-   
-   years = collect(Yr(2026):Yr(2029))
-   for year in years
-     Target[year] = Target[year-1]+(Target[Yr(2030)]-Target[Yr(2025)])/(2030-2025)
+     Target[year] = Target[year-1]+(Target[Yr(2030)]-Target[Yr(2020)])/(2030-2020)
    end
    
    # 
    # A portion of Natural Gas demands are now RNG
    #   
-   years = collect(Yr(2022):Yr(2050))     
+   years = collect(Future:Yr(2050))     
    for area in areas, tech in techs, ec in ECs, enduse in Enduses, year in years
      
      xDmFrac[enduse,RNG,tech,ec,area,year] = xDmFrac[enduse,RNG,tech,ec,area,year]+
@@ -116,7 +101,6 @@ function IndPolicy(db)
      DmFracMin[enduse,RNG,tech,ec,area,year] = xDmFrac[enduse,RNG,tech,ec,area,year]
    end
    
-   WriteDisk(db,"$Input/xDmFrac",xDmFrac)
    WriteDisk(db,"$Input/DmFracMin",DmFracMin)
 end
 
@@ -155,10 +139,6 @@ Base.@kwdef struct CControl
   xDmFrac::VariableArray{6} = ReadDisk(db,"$Input/xDmFrac") # [Enduse,Fuel,Tech,EC,Area,Year] Energy Demands Fuel/Tech Split (Fraction)
   
   # Scratch Variables
-  BDGoal::VariableArray{1} = zeros(Float64,length(Year)) # [Year] Ethanol Goal (Btu/Btu)
-  DmFrXAfter::VariableArray{5} = zeros(Float64,length(Enduse),length(Tech),length(EC),length(Area),length(Year)) # [Enduse,Tech,EC,Area,Year] xDmFrac excluding Biodiesel After Policy (Btu/Btu)
-  DmFrXBefore::VariableArray{5} = zeros(Float64,length(Enduse),length(Tech),length(EC),length(Area),length(Year)) # [Enduse,Tech,EC,Area,Year] xDmFrac excluding Biodiesel Before Policy (Btu/Btu)
-  ETGoal::VariableArray{1} = zeros(Float64,length(Year)) # [Year] Ethanol Goal (Btu/Btu)
   Target::VariableArray{1} = zeros(Float64,length(Year)) # [Year] Policy Fuel Target (Btu/Btu)
 end
 
@@ -171,7 +151,6 @@ function ComPolicy(db)
   (; DmFracMin) = data
   (; Target,xDmFrac) = data
 
-  years = collect(Yr(2022):Yr(2050))
   areas = Select(Area,"QC")
   techs = Select(Tech,"Gas")
   RNG = Select(Fuel,"RNG")
@@ -185,22 +164,13 @@ function ComPolicy(db)
    for year in years
      Target[year] = 0.10
    end
- 
-   Target[Yr(2025)] = 0.05
-   Target[Yr(2024)] = 0.035
-   Target[Yr(2023)] = 0.02
-   Target[Yr(2020)] = 0.01
-
-   years = collect(Yr(2021):Yr(2022))
+   Target[Yr(2020)] = 0.010
+   years = collect(Yr(2021):Yr(2029)) 
    for year in years
-     Target[year] = Target[year-1]+(Target[Yr(2023)]-Target[Yr(2020)])/(Yr(2023)-Yr(2020))
-   end
-   years = collect(Yr(2026):Yr(2029))
-   for year in years
-     Target[year] = Target[year-1]+(Target[Yr(2030)]-Target[Yr(2025)])/(Yr(2030)-Yr(2025))
+     Target[year] = Target[year-1]+(Target[Yr(2030)]-Target[Yr(2020)])/(2030-2020)
    end
    
-   years = collect(Yr(2022):Yr(2050))
+   years = collect(Future:Yr(2050))
    
    # 
    # A portion of Natural Gas demands are now RNG
@@ -213,7 +183,6 @@ function ComPolicy(db)
     DmFracMin[enduse,RNG,tech,ec,area,year] = xDmFrac[enduse,RNG,tech,ec,area,year]
    end
    
-   WriteDisk(db,"$Input/xDmFrac",xDmFrac)
    WriteDisk(db,"$Input/DmFracMin",DmFracMin)
 end
 
@@ -252,10 +221,6 @@ Base.@kwdef struct RControl
   xDmFrac::VariableArray{6} = ReadDisk(db,"$Input/xDmFrac") # [Enduse,Fuel,Tech,EC,Area,Year] Energy Demands Fuel/Tech Split (Fraction)
   
   # Scratch Variables
-  BDGoal::VariableArray{1} = zeros(Float64,length(Year)) # [Year] Ethanol Goal (Btu/Btu)
-  DmFrXAfter::VariableArray{5} = zeros(Float64,length(Enduse),length(Tech),length(EC),length(Area),length(Year)) # [Enduse,Tech,EC,Area,Year] xDmFrac excluding Biodiesel After Policy (Btu/Btu)
-  DmFrXBefore::VariableArray{5} = zeros(Float64,length(Enduse),length(Tech),length(EC),length(Area),length(Year)) # [Enduse,Tech,EC,Area,Year] xDmFrac excluding Biodiesel Before Policy (Btu/Btu)
-  ETGoal::VariableArray{1} = zeros(Float64,length(Year)) # [Year] Ethanol Goal (Btu/Btu)
   Target::VariableArray{1} = zeros(Float64,length(Year)) # [Year] Policy Fuel Target (Btu/Btu)
 end
 
@@ -268,7 +233,6 @@ function ResPolicy(db)
   (; DmFracMin) = data
   (; Target,xDmFrac) = data
   
-  years = collect(Yr(2022):Yr(2050))
   areas = Select(Area,"QC")
   techs = Select(Tech,"Gas")
   RNG = Select(Fuel,"RNG")
@@ -282,23 +246,13 @@ function ResPolicy(db)
    for year in years
      Target[year] = 0.10
    end
- 
-   Target[Yr(2025)] = 0.05
-   Target[Yr(2024)] = 0.035
-   Target[Yr(2023)] = 0.02
-   Target[Yr(2020)] = 0.01
-
-   years = collect(Yr(2021):Yr(2022)) 
+   Target[Yr(2020)] = 0.010
+   years = collect(Yr(2021):Yr(2029)) 
    for year in years
-     Target[year] = Target[year-1]+(Target[Yr(2023)]-Target[Yr(2020)])/(2023-2020)
+     Target[year] = Target[year-1]+(Target[Yr(2030)]-Target[Yr(2020)])/(2030-2020)
    end
    
-   years = collect(Yr(2026):Yr(2029))
-   for year in years
-     Target[year] = Target[year-1]+(Target[Yr(2030)]-Target[Yr(2025)])/(2030-2025)
-   end  
-   
-   years = collect(Yr(2022):Yr(2050))
+   years = collect(Future:Yr(2050))
   
    # 
    # A portion of Natural Gas demands are now RNG
@@ -311,16 +265,15 @@ function ResPolicy(db)
     DmFracMin[enduse,RNG,tech,ec,area,year] = xDmFrac[enduse,RNG,tech,ec,area,year]
    end
    
-   WriteDisk(db,"$Input/xDmFrac",xDmFrac)
    WriteDisk(db,"$Input/DmFracMin",DmFracMin)
 end
 
 Base.@kwdef struct EControl
   db::String
   
-  CalDB::String = "ECalDB"
-  Input::String = "EInput"
-  Outpt::String = "EOutput"
+  CalDB::String = "EGCalDB"
+  Input::String = "EGInput"
+  Outpt::String = "EGOutput"
   BCNameDB::String = ReadDisk(db,"E2020DB/BCNameDB") #  Base Case Name
 
   Area::SetArray = ReadDisk(db,"E2020DB/AreaKey")
@@ -344,8 +297,8 @@ Base.@kwdef struct EControl
   ANMap::VariableArray{2} = ReadDisk(db,"E2020DB/ANMap") # [Area,Nation] Map between Area and Nation
   FlFrNew::VariableArray{4} = ReadDisk(db,"EGInput/FlFrNew") # [FuelEP,Plant,Area,Year] Fuel Fraction for New Plants
   UnArea::Array{String} = ReadDisk(db,"EGInput/UnArea") # [Unit] Area Pointer
-  UnCounter::VariableArray{1} = ReadDisk(db,"EGInput/UnCounter") #[Year]  Number of Units
   UnCogen::VariableArray{1} = ReadDisk(db,"EGInput/UnCogen") # [Unit] Industrial Self-Generation Flag (1=Self-Generation)
+  UnCounter::VariableArray{1} = ReadDisk(db,"EGInput/UnCounter") #[Year]  Number of Units
   UnFlFrMax::VariableArray{3} = ReadDisk(db,"EGInput/UnFlFrMax") # [Unit,FuelEP,Year] Fuel Fraction Maximum (Btu/Btu)
   UnFlFrMin::VariableArray{3} = ReadDisk(db,"EGInput/UnFlFrMin") # [Unit,FuelEP,Year] Fuel Fraction Minimum (Btu/Btu)
   xUnFlFr::VariableArray{3} = ReadDisk(db,"EGInput/xUnFlFr") # [Unit,FuelEP,Year] Fuel Fraction (Btu/Btu)
@@ -384,22 +337,12 @@ function ElecPolicy(db)
   for year in years
    Target[year] = 0.10
   end
-
-  Target[Yr(2025)] = 0.050
-  Target[Yr(2024)] = 0.035
-  Target[Yr(2023)] = 0.020
   Target[Yr(2020)] = 0.010
-
-  years = collect(Yr(2021):Yr(2022)) 
+  years = collect(Yr(2021):Yr(2029)) 
   for year in years
-    Target[year] = Target[year-1]+(Target[Yr(2023)]-Target[Yr(2020)])/(2023-2020)
+    Target[year] = Target[year-1]+(Target[Yr(2030)]-Target[Yr(2020)])/(2030-2020)
   end
-   
-  years = collect(Yr(2026):Yr(2029))
-  for year in years
-    Target[year] = Target[year-1]+(Target[Yr(2030)]-Target[Yr(2025)])/(2030-2025)
-  end 
-  
+
   units = GetUtilityUnits(data,Yr(2025))
   RNG = Select(FuelEP,"RNG")
   NaturalGas = Select(FuelEP,"NaturalGas")
@@ -407,7 +350,7 @@ function ElecPolicy(db)
   #
   #  A portion of NaturalGas demands are now RNG
   #     
-  years = collect(Yr(2022):Yr(2050)) 
+  years = collect(Future:Yr(2050)) 
   for year in years, unit in units
   
     #if (unit == 1256) && (year == Yr(2050))
@@ -422,8 +365,7 @@ function ElecPolicy(db)
     xUnFlFr[unit,RNG,year] = xUnFlFr[unit,RNG,year]+
                            xUnFlFr[unit,NaturalGas,year]*Target[year]
                            
-    xUnFlFr[unit,NaturalGas,year] = xUnFlFr[unit,NaturalGas,year]+
-      xUnFlFr[unit,NaturalGas,year]*(1-Target[year])
+    xUnFlFr[unit,NaturalGas,year] = xUnFlFr[unit,NaturalGas,year]*(1-Target[year])
       
     #if (unit == 1256) && (year == Yr(2050))
     # loc1 = xUnFlFr[unit,RNG,year]
