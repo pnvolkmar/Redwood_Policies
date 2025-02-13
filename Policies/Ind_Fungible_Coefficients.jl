@@ -21,7 +21,6 @@ Base.@kwdef struct IControl
   Input::String = "IInput"
   Outpt::String = "IOutput"
   BCNameDB::String = ReadDisk(db,"E2020DB/BCNameDB") #  Base Case Name
-  RefNameDB::String = ReadDisk(db,"E2020DB/RefNameDB") #  Reference Case Name
 
   Area::SetArray = ReadDisk(db,"E2020DB/AreaKey")
   AreaDS::SetArray = ReadDisk(db,"E2020DB/AreaDS")
@@ -55,8 +54,10 @@ Base.@kwdef struct IControl
   DmFracTime::VariableArray{6} = ReadDisk(db,"$Input/DmFracTime") # [Enduse,Fuel,Tech,EC,Area,Year] Demand Fuel/Tech Adjustment Time (Years)
   DmFracVF::VariableArray{5} = ReadDisk(db,"$Input/DmFracVF") # [Enduse,Fuel,Tech,EC,Area] Demand Fuel/Tech Fraction Variance Factor (Btu/Btu)
   DPL::VariableArray{5} = ReadDisk(db,"$Outpt/DPL") # [Enduse,Tech,EC,Area,Year] Physical Life of Equipment (Years) 
-  ECFP0Ref::VariableArray{4} = ReadDisk(RefNameDB,"$Outpt/ECFP",First) # [Enduse,Tech,EC,Area,First] Fuel Price ($/mmBtu)
-  ECFPFuelRef::VariableArray{4} = ReadDisk(RefNameDB,"$Outpt/ECFPFuel") # [Fuel,EC,Area,Year] Fuel Price ($/mmBtu)
+  ECFP0Ref::VariableArray{4} = ReadDisk(BCNameDB,"$Outpt/ECFP",First) # [Enduse,Tech,EC,Area,First] Fuel Price ($/mmBtu)
+  ECFPFuelRef::VariableArray{4} = ReadDisk(BCNameDB,"$Outpt/ECFPFuel") # [Fuel,EC,Area,Year] Fuel Price ($/mmBtu)
+  Inflation::VariableArray{2} = ReadDisk(db,"MOutput/Inflation") # [Area,Year] Inflation Index ($/$)
+  Inflation0::VariableArray{1} = ReadDisk(db,"MInput/xInflation",First) # [Area,Year] Inflation Index ($/$)
   xDmFrac::VariableArray{6} = ReadDisk(db,"$Input/xDmFrac") # [Enduse,Fuel,Tech,EC,Area,Year] Energy Demands Fuel/Tech Split (Btu/Btu)
 
   # Scratch Variables
@@ -72,121 +73,101 @@ function Fungible(data,techs,ecs,areas,years)
   (; DmFrac,DmFracMarginal,DmFracMax,DmFracMAW) = data
   (; DmFracMin,DmFracMSF) = data
   (; DmFracMSM0,DmFracTime,DmFracTMAW,DmFracTotal,DmFracVF) = data
-  (; ECFP0Ref,ECFPFuelRef) = data
+  (; ECFP0Ref,ECFPFuelRef,Inflation,Inflation0) = data
 
   for year in years
-    @finite_math [DmFracMAW[eu,fuel,tech,ec,area] = 
-      exp(DmFracMSM0[eu,fuel,tech,ec,area,year] + DmFracVF[eu,fuel,tech,ec,area] * 
-        log(ECFPFuelRef[fuel,ec,area,year]/ECFP0Ref[eu,tech,ec,area]))
-      for eu in Enduses, fuel in Fuels, tech in techs, ec in ecs, area in areas]
+    @finite_math [DmFracMAW[enduse,fuel,tech,ec,area] = 
+      exp(DmFracMSM0[enduse,fuel,tech,ec,area,year] + DmFracVF[enduse,fuel,tech,ec,area] * 
+        log((ECFPFuelRef[fuel,ec,area,year]/Inflation[area,year])/
+          (ECFP0Ref[enduse,tech,ec,area]/Inflation0[area])))
+      for enduse in Enduses, fuel in Fuels, tech in techs, ec in ecs, area in areas]
 
     DmFracTMAW[Enduses,techs,ecs,areas] = 
       sum(DmFracMAW[Enduses,fuel,techs,ecs,areas] for fuel in Fuels)
     
-    for area in areas, ec in ecs, tech in techs, fuel in Fuels, eu in Enduses
-      @finite_math DmFracMSF[eu,fuel,tech,ec,area,year] = DmFracMAW[eu,fuel,tech,ec,area] / 
-      	DmFracTMAW[eu,tech,ec,area]
+    for area in areas, ec in ecs, tech in techs, fuel in Fuels, enduse in Enduses
+      @finite_math DmFracMSF[enduse,fuel,tech,ec,area,year] = DmFracMAW[enduse,fuel,tech,ec,area] / 
+      	DmFracTMAW[enduse,tech,ec,area]
     end
         
     # 
     # Apply Minimums and Maximums
     #   
-    for area in areas, ec in ecs, tech in techs, fuel in Fuels, eu in Enduses    
-      DmFracMarginal[eu,fuel,tech,ec,area,year] = DmFracMSF[eu,fuel,tech,ec,area,year]
+    for area in areas, ec in ecs, tech in techs, fuel in Fuels, enduse in Enduses    
+      DmFracMarginal[enduse,fuel,tech,ec,area,year] = DmFracMSF[enduse,fuel,tech,ec,area,year]
     end
     
     for DmFracCount in 1:10
-      for area in areas, ec in ecs, tech in techs, fuel in Fuels, eu in Enduses
-        DmFracMarginal[eu,fuel,tech,ec,area,year] = 
-          min(max(DmFracMarginal[eu,fuel,tech,ec,area,year], 
-            DmFracMin[eu,fuel,tech,ec,area,year]), 6DmFracMax[eu,fuel,tech,ec,area,year])
+      for area in areas, ec in ecs, tech in techs, fuel in Fuels, enduse in Enduses
+        DmFracMarginal[enduse,fuel,tech,ec,area,year] = 
+          min(max(DmFracMarginal[enduse,fuel,tech,ec,area,year], 
+            DmFracMin[enduse,fuel,tech,ec,area,year]), 6DmFracMax[enduse,fuel,tech,ec,area,year])
       end
                 
       DmFracTotal[Enduses,techs,ecs,areas] = 
         sum(DmFracMarginal[Enduses,fuel,techs,ecs,areas,year] for fuel in Fuels) 
         
-      for area in areas, ec in ecs, tech in techs, fuel in Fuels, eu in Enduses
-        @finite_math DmFracMarginal[eu,fuel,tech,ec,area,year] = 
-          DmFracMarginal[eu,fuel,tech,ec,area,year] / DmFracTotal[eu,tech,ec,area]
+      for area in areas, ec in ecs, tech in techs, fuel in Fuels, enduse in Enduses
+        @finite_math DmFracMarginal[enduse,fuel,tech,ec,area,year] = 
+          DmFracMarginal[enduse,fuel,tech,ec,area,year] / DmFracTotal[enduse,tech,ec,area]
       end
       
     end # while DmFracCount < 10
 
     # DmFracPrior is DmFrac using year-1
-    for area in areas, ec in ecs, tech in techs, fuel in Fuels, eu in Enduses
-      DmFrac[eu,fuel,tech,ec,area,year] = DmFrac[eu,fuel,tech,ec,area,year-1] +
-        (DmFracMarginal[eu,fuel,tech,ec,area,year] - DmFrac[eu,fuel,tech,ec,area,year-1]) /
-           DmFracTime[eu,fuel,tech,ec,area,year]
+    for area in areas, ec in ecs, tech in techs, fuel in Fuels, enduse in Enduses
+      DmFrac[enduse,fuel,tech,ec,area,year] = DmFrac[enduse,fuel,tech,ec,area,year-1] +
+        (DmFracMarginal[enduse,fuel,tech,ec,area,year] - DmFrac[enduse,fuel,tech,ec,area,year-1]) /
+           DmFracTime[enduse,fuel,tech,ec,area,year]
     end
 
-    for area in areas, ec in ecs, tech in techs, eu in Enduses
-      DmFracTotal[eu,tech,ec,area] = sum(DmFrac[eu,fuel,tech,ec,area,year] for fuel in Fuels)
+    for area in areas, ec in ecs, tech in techs, enduse in Enduses
+      DmFracTotal[enduse,tech,ec,area] = sum(DmFrac[enduse,fuel,tech,ec,area,year] for fuel in Fuels)
     end
       
-    for area in areas, ec in ecs, tech in techs, fuel in Fuels, eu in Enduses
-      DmFrac[eu,fuel,tech,ec,area,year] = DmFrac[eu,fuel,tech,ec,area,year] / 
-      	DmFracTotal[eu,tech,ec,area]
+    for area in areas, ec in ecs, tech in techs, fuel in Fuels, enduse in Enduses
+      DmFrac[enduse,fuel,tech,ec,area,year] = DmFrac[enduse,fuel,tech,ec,area,year] / 
+      	DmFracTotal[enduse,tech,ec,area]
     end
     
   end
   
 end # Fungible
 
-function FungibleCalib(data,eu,fuels,t,ec,a,year)
+function FungibleCalib(data,enduse,fuels,tech,ec,area,year)
   (; DmFracMAW,DmFracMSM0,DmFracMU,DmFracVF,ECFP0Ref) = data
-  (; ECFPFuelRef,xDmFrac) = data
+  (; ECFPFuelRef,Inflation,Inflation0,xDmFrac) = data
  
-  for f in fuels
-    @finite_math DmFracMAW[eu,f,t,ec,a] =
-      exp(DmFracVF[eu,f,t,ec,a]*log(ECFPFuelRef[f,ec,a,year]/ECFP0Ref[eu,t,ec,a]))
+  for fuel in fuels
+    @finite_math DmFracMAW[enduse,fuel,tech,ec,area] =
+      exp(DmFracVF[enduse,fuel,tech,ec,area]*log((ECFPFuelRef[fuel,ec,area,year]/Inflation[area,year])/
+        (ECFP0Ref[enduse,tech,ec,area]/Inflation0[area])))
 
-    @finite_math DmFracMU[eu,f,t,ec,a] = 
-      xDmFrac[eu,f,t,ec,a,year]/DmFracMAW[eu,f,t,ec,a]
+    @finite_math DmFracMU[enduse,fuel,tech,ec,area] = 
+      xDmFrac[enduse,fuel,tech,ec,area,year]/DmFracMAW[enduse,fuel,tech,ec,area]
   end
   
-  @.  @finite_math DmFracMSM0[eu,fuels,t,ec,a,year] = 
-    log(DmFracMU[eu,fuels,t,ec,a]/maximum(DmFracMU[eu,f,t,ec,a] for f in fuels))
+  @.  @finite_math DmFracMSM0[enduse,fuels,tech,ec,area,year] = 
+    log(DmFracMU[enduse,fuels,tech,ec,area]/maximum(DmFracMU[enduse,fuel,tech,ec,area] for fuel in fuels))
   
-  # if (Enduse[eu] == "Heat")
-    #   @info " "
-    #   EuKey = Enduse[eu]
-    #   TechKey = Tech[t]
-    #   EcKey = EC[ec]
-    #   AreaKey = EC[ec]
-    #   YearKey = Year[y]
-    #   @info "$EuKey, $TechKey, $EcKey, $AreaKey, $YearKey"
-    #   ZZZ = DmFracMSM0[eu,fuel,t,ec,a,y]
-    #   @info "DmFracMSM0 = $ZZZ"
-    #   ZZZ = ECFPFuelRef[fuel,ec,a,y]
-    #   @info "ECFPFuelRef = $ZZZ"
-    #   ZZZ = ECFP0Ref[eu,t,ec,a,y]
-    #   @info "ECFP0Ref = $ZZZ"
-    #   ZZZ = DmFracMAW[eu,fuel,t,ec,a]
-    #   @info "DmFracMAW = $ZZZ"
-    #   ZZZ = DmFracMU[eu,fuel,t,ec,a]
-    #   @info "DmFracMU = $ZZZ"
-    #   @info " "
-    # end
-  # end
 end #FungibleCalib
 
 function ControlFungibleCalib(data,techs,ecs,areas,years)
   (; Enduses,Fuels,Year) = data
-  (; Enduses,Fuels,Year) = data
   (; DmFracMSM0,ECFPFuelRef,xDmFrac) = data
 
-  for eu in Enduses, fuel in Fuels, tech in techs, ec in ecs, area in areas, year in years
-    DmFracMSM0[eu,fuel,tech,ec,area,year] = -170.391
+  for year in years, area in areas, ec in ecs, tech in techs, fuel in Fuels, enduse in Enduses
+    DmFracMSM0[enduse,fuel,tech,ec,area,year] = -170.391
   end
     
-  for year in years, area in areas, ec in ecs, tech in techs, eu in Enduses
-    fuelsxDMFrac = Select(xDmFrac[eu,Fuels,tech,ec,area,year],>(0.0))
+  for year in years, area in areas, ec in ecs, tech in techs, enduse in Enduses
+    fuelsxDMFrac = Select(xDmFrac[enduse,Fuels,tech,ec,area,year],>(0.0))
     fuelsECFPFuel = Select(ECFPFuelRef[Fuels,ec,area,year],>(0.0))
     fuels = intersect(fuelsxDMFrac,fuelsECFPFuel)
     if HasValues(fuels)
-      FungibleCalib(data,eu,fuels,tech,ec,area,year)
+      FungibleCalib(data,enduse,fuels,tech,ec,area,year)
     else
-      DmFracMSM0[eu,fuels,tech,ec,area,year] = DmFracMSM0[eu,fuels,tech,ec,area,year-1]
+      DmFracMSM0[enduse,fuels,tech,ec,area,year] = DmFracMSM0[enduse,fuels,tech,ec,area,year-1]
     end
     
   end
@@ -194,7 +175,7 @@ function ControlFungibleCalib(data,techs,ecs,areas,years)
 end # ControlFungibleCalib
 
 function ControlFlow(data)
-  (; Area,EC,Enduses,Fuels,Tech) = data
+  (; Area,Areas,EC,ECs,Enduses,Fuels,Tech,Techs) = data
   (; DmFracMSM0) = data
 
   #
@@ -204,17 +185,6 @@ function ControlFlow(data)
   ecs = Select(EC,["Petrochemicals","Petroleum","OilSandsUpgraders"])
   tech = Select(Tech,"Gas")
   years = collect(Yr(2024):Yr(2030))
-  ControlFungibleCalib(data,tech,ecs,area,years)
-
-  years = collect(Yr(2031):Yr(2050))
-  for eu in Enduses, fuel in Fuels, ec in ecs, year in years
-    DmFracMSM0[eu,fuel,tech,ec,area,year] = DmFracMSM0[eu,fuel,tech,ec,area,Yr(2030)]
-  end
-   
-  #
-  # Check results
-  #  
-  years = collect(Yr(2024):Yr(2050))
   ControlFungibleCalib(data,tech,ecs,area,years)
 
 end # ControlFlow

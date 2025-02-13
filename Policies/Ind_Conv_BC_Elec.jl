@@ -58,14 +58,12 @@ function IndPolicy(db)
   data = IControl(; db)
   (; CalDB,Input) = data
   (; Area,CTech,CTechs) = data
-  (; EC,Enduses) = data
-  (; Tech,Techs) = data
+  (; EC,Enduse,Enduses,Tech,Techs) = data
   (; CFrac,CFraction,CMSM0,CMSM0Max,MMSM0) = data
 
   BC = Select(Area,"BC")
   ec = Select(EC,"OtherMetalMining")
   years = collect(Future:Final)
-
   #
   # Conversion Opportunities
   #
@@ -92,7 +90,7 @@ function IndPolicy(db)
   #
   # Conversion Coefficients
   #  
-  for enduse in Enduses,tech in Techs,ctech in CTechs,year in years
+   for enduse in Enduses, tech in Techs, ctech in CTechs, year in years
     if CFrac[enduse,tech,ctech,ec,BC,year] == 1.0
       CMSM0[enduse,tech,ctech,ec,BC,year] = MMSM0[enduse,tech,ec,BC,year]
     else
@@ -103,11 +101,11 @@ function IndPolicy(db)
   #
   # Normalize Coefficients
   #  
-  for enduse in Enduses,ctech in CTechs,year in years
+  for year in years, ctech in CTechs, enduse in Enduses
     CMSM0Max[enduse,ctech,ec,BC,year] = maximum(CMSM0[enduse,Techs,ctech,ec,BC,year])
   end
 
-  for enduse in Enduses,tech in Techs,ctech in CTechs,year in years
+  for year in years, ctech in CTechs, tech in Techs, enduse in Enduses
     CMSM0[enduse,tech,ctech,ec,BC,year] = CMSM0[enduse,tech,ctech,ec,BC,year]-
       CMSM0Max[enduse,ctech,ec,BC,year]
   end
