@@ -71,7 +71,10 @@ function TransPolicy(db)
   for year in years, poll in Polls, ec in ECs, tech in Techs
     POCX[1,Ethanol,tech,ec,poll,CA,year] = 0.0
   end
-
+  # TODO Promula: This overwrites the 0 values in 2030 with values near 0 but 
+  # not exactly zero due to rounding in PROMULA
+  # To match up precisely, we're better of leaving the 2030 values in the loop below
+  # in Promula
   years = collect(Future:Yr(2030))
   for year in years, poll in Polls, ec in ECs, tech in Techs
     POCX[1,Ethanol,tech,ec,poll,CA,year] = POCX[1,Ethanol,tech,ec,poll,CA,year-1]+

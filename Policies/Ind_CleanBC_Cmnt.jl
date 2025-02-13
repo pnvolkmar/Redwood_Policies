@@ -67,7 +67,8 @@ end
 function IndPolicy(db::String)
   data = IControl(; db)
   (; Input) = data    
-  (; Area,EC,Enduse) = data 
+  (; Area,EC,Enduse,Year) = data 
+  (; Years,Techs,Fuels,Enduses,ECs) = data
   (; Fuel,Nation) = data
   (; Tech) = data
   (; DInvExo,DmFracMin,DmFracMax) = data
@@ -77,9 +78,11 @@ function IndPolicy(db::String)
   p_f  = Select(Fuel,"Diesel")
   p_t  = Select(Tech, "OffRoad")
   p_ec = Select(EC,"IronOreMining")
-  p_a  = Select(Area, "ON")
+  p_on  = Select(Area, "ON")
+  p_bc  = Select(Area, "BC")
   p_y  = Yr(1985)
-  print("\nDmFracMin: ",DmFracMin[p_eu,p_f,p_t,p_ec,p_a,p_y])
+  print("\nDmFracMin [ON]: ",DmFracMin[p_eu,p_f,p_t,p_ec,p_on,p_y])
+  print("\nDmFracMin [BC]: ",DmFracMin[p_eu,p_f,p_t,p_ec,p_bc,p_y])
   ####################
   #
   # Substitution of biomass for natural gas occurs through the
@@ -166,6 +169,8 @@ function IndPolicy(db::String)
     DmFracMin[enduse,NaturalGas,tech,ec,area,year] = xDmFrac[enduse,NaturalGas,tech,ec,area,year-1]
   end
 
+  WriteDisk(db,"$Input/DmFracMin",DmFracMin)
+  WriteDisk(db,"$Input/DmFracMax",DmFracMax)
   #
   # Program Costs $M
   #
@@ -190,6 +195,15 @@ function IndPolicy(db::String)
   ec = Select(EC,"Cement")
   tech = Select(Tech,"Biomass")
   waste = Select(Fuel,"Waste")
+  #################################################
+  # TODO Promula storing data for later replacement
+  BC_Min = zeros(Float64,length(Year))
+  BC_Max = zeros(Float64,length(Year))
+  for year in Years
+    BC_Min[year] = DmFracMin[enduse,waste,tech,ec,area,year]
+    BC_Max[year] = DmFracMax[enduse,waste,tech,ec,area,year]
+  end
+  #################################################
 
   # Set waste demand fractions to 2025 values for future years
   years = collect(Yr(2026):Yr(2050))
@@ -210,7 +224,32 @@ function IndPolicy(db::String)
     DmFracMin[enduse,waste,tech,ec,area,year] = xDmFrac[enduse,waste,tech,ec,area,year-1]
     DmFracMin[enduse,waste,tech,ec,area,year] = xDmFrac[enduse,waste,tech,ec,area,year-1]
   end
-
+  ##############################################################################
+  # TODO Promula: The Write Disk PROMULA accidentally overwrites the ON values
+  ON = Select(Area, "ON")
+  BC = Select(Area, "BC")
+  ####################
+  print("\nDmFracMin [ON]: ",DmFracMin[p_eu,p_f,p_t,p_ec,p_on,p_y])
+  print("\nDmFracMin [BC]: ",DmFracMin[p_eu,p_f,p_t,p_ec,p_bc,p_y])
+  ####################
+  
+  for year in Years, ec in ECs, tech in Techs, fuel in Fuels, enduse in Enduses
+    DmFracMin[enduse,fuel,tech,ec,ON,year] = DmFracMin[enduse,fuel,tech,ec,BC,year]
+    DmFracMax[enduse,fuel,tech,ec,ON,year] = DmFracMax[enduse,fuel,tech,ec,BC,year]
+  end
+  for year in collect(Yr(2026):Yr(2050))
+    DmFracMin[enduse,waste,tech,ec,area,year] = BC_Min[year]
+    DmFracMax[enduse,waste,tech,ec,area,year] = BC_Max[year]
+  end
+  
+  # DmFracMin[:,:,:,:,ON,:] .= DmFracMin[:,:,:,:,BC,:]
+  # DmFracMax[:,:,:,:,ON,:] .= DmFracMax[:,:,:,:,BC,:]
+  ####################
+  print("\nDmFracMin [ON]: ",DmFracMin[p_eu,p_f,p_t,p_ec,p_on,p_y])
+  print("\nDmFracMin [BC]: ",DmFracMin[p_eu,p_f,p_t,p_ec,p_bc,p_y])
+  ####################
+  ##############################################################################
+  
   WriteDisk(db,"$Input/DmFracMin",DmFracMin)
   WriteDisk(db,"$Input/DmFracMax",DmFracMax)
 end

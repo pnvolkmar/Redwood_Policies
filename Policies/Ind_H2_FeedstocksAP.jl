@@ -66,7 +66,13 @@ function IndPolicy(db)
   OilSandsUpgraders = Select(EC,"OilSandsUpgraders")
 
   AB = Select(Area,"AB")
-  years = collect(Yr(2024):Yr(2030))
+  #
+  # Originally AirProducts was scheduled to come online in 2024. It appears that this is no longer the case
+  # and that expected timeline for the completion of the project has been pushed back.
+  # With this in mind the original year that hydrogen feedstock demand will be accepted in Alberta is in
+  # 2025. This assumption may need to be revisited throughout the Ref24 update cycle.
+  # 
+  years = collect(Yr(2025):Yr(2030))
   for year in years
     xFsFrac[Hydrogen,     Gas,Petrochemicals,   AB,year] = 0.0000
     xFsFrac[NaturalGas,   Gas,Petrochemicals,   AB,year] = 0.0000
@@ -74,14 +80,14 @@ function IndPolicy(db)
     xFsFrac[RNG,          Gas,Petrochemicals,   AB,year] = 0.0000
     xFsFrac[StillGas,     Gas,Petrochemicals,   AB,year] = 0.0000
   
-    xFsFrac[Hydrogen,     Gas,Petroleum,        AB,year] = 0.1993
-    xFsFrac[NaturalGas,   Gas,Petroleum,        AB,year] = 0.7948
+    xFsFrac[Hydrogen,     Gas,Petroleum,        AB,year] = 0.5861
+    xFsFrac[NaturalGas,   Gas,Petroleum,        AB,year] = 0.4122
     xFsFrac[NaturalGasRaw,Gas,Petroleum,        AB,year] = 0.0000
     xFsFrac[RNG,          Gas,Petroleum,        AB,year] = 0.0000
     xFsFrac[StillGas,     Gas,Petroleum,        AB,year] = 0.0000
   
-    xFsFrac[Hydrogen,     Gas,OilSandsUpgraders,AB,year] = 0.0111
-    xFsFrac[NaturalGas,   Gas,OilSandsUpgraders,AB,year] = 0.9888
+    xFsFrac[Hydrogen,     Gas,OilSandsUpgraders,AB,year] = 0.2000
+    xFsFrac[NaturalGas,   Gas,OilSandsUpgraders,AB,year] = 0.8000
     xFsFrac[NaturalGasRaw,Gas,OilSandsUpgraders,AB,year] = 0.0000
     xFsFrac[RNG,          Gas,OilSandsUpgraders,AB,year] = 0.0000
     xFsFrac[StillGas,     Gas,OilSandsUpgraders,AB,year] = 0.0000
@@ -95,6 +101,180 @@ function IndPolicy(db)
   FsFracMax[fuels,Gas,ecs,AB,Years] = xFsFrac[fuels,Gas,ecs,AB,Years]
   FsFracMin[fuels,Gas,ecs,AB,Years] = xFsFrac[fuels,Gas,ecs,AB,Years]
 
+  WriteDisk(db,"$Input/FsFracMax",FsFracMax)
+  WriteDisk(db,"$Input/FsFracMin",FsFracMin)
+  WriteDisk(db,"$Input/xFsFrac",xFsFrac)
+  #
+  # Process multiple facilities with specific fuel fraction profiles
+  #
+  
+  # Irving Oil Refinery in NB: data from NRCan
+  area = Select(Area,"NB") 
+  ec = Select(EC,"Petroleum")
+  tech = Select(Tech,"Gas")
+  fuels = Select(Fuel,["Hydrogen","NaturalGas","NaturalGasRaw","RNG","StillGas"])
+  
+  # Set 2024 fractions for NB facility
+  xFsFrac[Hydrogen,tech,ec,area,Yr(2024)] = 0.0392
+  xFsFrac[NaturalGas,tech,ec,area,Yr(2024)] = 0.9608
+  xFsFrac[NaturalGasRaw,tech,ec,area,Yr(2024)] = 0.0000
+  xFsFrac[RNG,tech,ec,area,Yr(2024)] = 0.0000
+  xFsFrac[StillGas,tech,ec,area,Yr(2024)] = 0.0000
+  
+  # Apply 2024 values through 2030
+  years = collect(Yr(2025):Yr(2030))
+  for year in years, fuel in fuels
+    xFsFrac[fuel,tech,ec,area,year] = xFsFrac[fuel,tech,ec,area,Yr(2024)]
+  end
+  
+  # Keep constant post-2030
+  years = collect(Yr(2031):Final)
+  for year in years, fuel in fuels
+    xFsFrac[fuel,tech,ec,area,year] = xFsFrac[fuel,tech,ec,area,year-1]*1.00
+  end
+  
+  # Set min/max constraints
+  for year in Years, fuel in fuels
+    FsFracMax[fuel,tech,ec,area,year] = xFsFrac[fuel,tech,ec,area,year]
+    FsFracMin[fuel,tech,ec,area,year] = xFsFrac[fuel,tech,ec,area,year]
+  end
+  
+  WriteDisk(db,"$Input/FsFracMax",FsFracMax)
+  WriteDisk(db,"$Input/FsFracMin",FsFracMin)
+  WriteDisk(db,"$Input/xFsFrac",xFsFrac)
+  
+  # Varennes Biofuel Facility in QC 
+  # This facility falls under the OtherChemicals NAICS classification
+  area = Select(Area,"QC")
+  ec = Select(EC,"OtherChemicals")
+  tech = Select(Tech,"LPG")
+  fuels = Select(Fuel,["Hydrogen","NaturalGas","NaturalGasRaw","RNG","StillGas","LPG"])
+  
+  # Set 2026 fractions for QC facility
+  xFsFrac[Hydrogen,tech,ec,area,Yr(2026)] = 0.1632
+  xFsFrac[NaturalGas,tech,ec,area,Yr(2026)] = 0.0000  
+  xFsFrac[NaturalGasRaw,tech,ec,area,Yr(2026)] = 0.0000
+  xFsFrac[RNG,tech,ec,area,Yr(2026)] = 0.0000
+  xFsFrac[StillGas,tech,ec,area,Yr(2026)] = 0.0000
+  xFsFrac[LPG,tech,ec,area,Yr(2026)] = 0.8168
+  
+  # Apply declining factor through 2030
+  years = collect(Yr(2027):Yr(2030))
+  for year in years, fuel in fuels
+    xFsFrac[fuel,tech,ec,area,year] = xFsFrac[fuel,tech,ec,area,Yr(2026)]*0.985
+  end
+  
+  # Continue decline post-2030
+  years = collect(Yr(2031):Final)
+  for year in years, fuel in fuels
+    xFsFrac[fuel,tech,ec,area,year] = xFsFrac[fuel,tech,ec,area,year-1]*0.982
+  end
+  
+  # Set min/max constraints
+  for year in Years, fuel in fuels
+    FsFracMax[fuel,tech,ec,area,year] = xFsFrac[fuel,tech,ec,area,year]
+    FsFracMin[fuel,tech,ec,area,year] = xFsFrac[fuel,tech,ec,area,year]
+  end
+  
+  WriteDisk(db,"$Input/FsFracMax",FsFracMax)
+  WriteDisk(db,"$Input/FsFracMin",FsFracMin)
+  WriteDisk(db,"$Input/xFsFrac",xFsFrac)
+  
+  # Braya Facility in NL
+  # This facility falls under the OtherChemicals NAICS classification
+  area = Select(Area,"NL")
+  ec = Select(EC,"OtherChemicals") 
+  tech = Select(Tech,"LPG")
+  fuels = Select(Fuel,["Hydrogen","NaturalGas","NaturalGasRaw","RNG","StillGas","LPG"])
+  
+  # Set 2024 fractions for NL facility
+  xFsFrac[Hydrogen,tech,ec,area,Yr(2024)] = 0.9674
+  xFsFrac[NaturalGas,tech,ec,area,Yr(2024)] = 0.0000
+  xFsFrac[NaturalGasRaw,tech,ec,area,Yr(2024)] = 0.0000
+  xFsFrac[RNG,tech,ec,area,Yr(2024)] = 0.0000
+  xFsFrac[StillGas,tech,ec,area,Yr(2024)] = 0.0000
+  xFsFrac[LPG,tech,ec,area,Yr(2024)] = 0.0126
+  
+  # Apply 2024 values through 2030
+  years = collect(Yr(2025):Yr(2030))
+  for year in years, fuel in fuels
+    xFsFrac[fuel,tech,ec,area,year] = xFsFrac[fuel,tech,ec,area,Yr(2024)]
+  end
+  
+  # Keep constant post-2030
+  years = collect(Yr(2031):Final)
+  for year in years, fuel in fuels
+    xFsFrac[fuel,tech,ec,area,year] = xFsFrac[fuel,tech,ec,area,year-1]*1.00
+  end
+  
+  # Set min/max constraints
+  for year in Years, fuel in fuels
+    FsFracMax[fuel,tech,ec,area,year] = xFsFrac[fuel,tech,ec,area,year]
+    FsFracMin[fuel,tech,ec,area,year] = xFsFrac[fuel,tech,ec,area,year]
+  end
+  
+  WriteDisk(db,"$Input/FsFracMax",FsFracMax)
+  WriteDisk(db,"$Input/FsFracMin",FsFracMin)
+  WriteDisk(db,"$Input/xFsFrac",xFsFrac)
+  
+  # SK OtherChemicals Facility
+  area = Select(Area,"SK")
+  ec = Select(EC,"OtherChemicals")
+  tech = Select(Tech,"LPG")
+  fuels = Select(Fuel,["Hydrogen","LPG"])
+  
+  # Set 2030 fractions for SK facility
+  xFsFrac[Hydrogen,tech,ec,area,Yr(2030)] = 0.3122
+  xFsFrac[LPG,tech,ec,area,Yr(2030)] = 0.6742
+  
+  # Keep constant post-2030
+  years = collect(Yr(2031):Final)
+  for year in years, fuel in fuels
+    xFsFrac[fuel,tech,ec,area,year] = xFsFrac[fuel,tech,ec,area,year-1]
+  end
+  
+  # Set min/max constraints
+  for year in Years, fuel in fuels
+    FsFracMax[fuel,tech,ec,area,year] = xFsFrac[fuel,tech,ec,area,year]
+    FsFracMin[fuel,tech,ec,area,year] = xFsFrac[fuel,tech,ec,area,year]
+  end
+  
+  WriteDisk(db,"$Input/FsFracMax",FsFracMax)
+  WriteDisk(db,"$Input/FsFracMin",FsFracMin)
+  WriteDisk(db,"$Input/xFsFrac",xFsFrac)
+  
+  # QC Petroleum Facility
+  area = Select(Area,"QC")
+  ec = Select(EC,"Petroleum")
+  tech = Select(Tech,"Gas")
+  fuels = Select(Fuel,["Hydrogen","NaturalGas","NaturalGasRaw","RNG","StillGas","LPG"])
+  
+  # Set 2025 fractions for QC facility
+  xFsFrac[Hydrogen,tech,ec,area,Yr(2025)] = 0.1069
+  xFsFrac[NaturalGas,tech,ec,area,Yr(2025)] = 0.8931
+  xFsFrac[NaturalGasRaw,tech,ec,area,Yr(2025)] = 0.0000
+  xFsFrac[RNG,tech,ec,area,Yr(2025)] = 0.0000
+  xFsFrac[StillGas,tech,ec,area,Yr(2025)] = 0.0000
+  xFsFrac[LPG,tech,ec,area,Yr(2025)] = 0.0000
+  
+  # Apply 2025 values through 2030
+  years = collect(Yr(2026):Yr(2030))
+  for year in years, fuel in fuels
+    xFsFrac[fuel,tech,ec,area,year] = xFsFrac[fuel,tech,ec,area,Yr(2025)]
+  end
+  
+  # Keep constant post-2030
+  years = collect(Yr(2031):Final)
+  for year in years, fuel in fuels
+    xFsFrac[fuel,tech,ec,area,year] = xFsFrac[fuel,tech,ec,area,year-1]*1.00
+  end
+  
+  # Set min/max constraints
+  for year in Years, fuel in fuels
+    FsFracMax[fuel,tech,ec,area,year] = xFsFrac[fuel,tech,ec,area,year]
+    FsFracMin[fuel,tech,ec,area,year] = xFsFrac[fuel,tech,ec,area,year]
+  end
+  
   WriteDisk(db,"$Input/FsFracMax",FsFracMax)
   WriteDisk(db,"$Input/FsFracMin",FsFracMin)
   WriteDisk(db,"$Input/xFsFrac",xFsFrac)
