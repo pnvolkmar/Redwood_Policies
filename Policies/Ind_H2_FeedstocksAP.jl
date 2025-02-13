@@ -54,6 +54,7 @@ function IndPolicy(db)
   (; xFsFrac,FsFracMin,FsFracMax) = data
   
   Hydrogen = Select(Fuel,"Hydrogen")
+  LPG = Select(Fuel,"LPG")
   NaturalGas = Select(Fuel,"NaturalGas")
   NaturalGasRaw = Select(Fuel,"NaturalGasRaw")
   RNG = Select(Fuel,"RNG")
