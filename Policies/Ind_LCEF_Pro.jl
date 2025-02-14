@@ -71,12 +71,18 @@ end
 
 function AllocateReduction(data::IControl,enduses,techs,ecs,areas,years)
   (; db,Input,Outpt) = data
-  (; Enduse) = data
+  (; Area,EC,Enduse,Tech) = data
   (; DmdFrac,DmdRef) = data
   (; DmdTotal,FractionRemovedAnnually,PERRef) = data
   (; PERRRExo) = data
   (; ReductionAdditional,ReductionTotal) = data
-
+  heat = Select(Enduse, "Heat")
+  gas = Select(Tech, "Gas")
+  cement = Select(EC, "Cement")
+  qc = Select(Area, "QC")
+  y2026  = Yr(2026)
+  
+  print("\nPERRRExo:", PERRRExo[heat,gas,cement,qc,y2026])
   #
   # Total Demands
   #  
@@ -109,6 +115,7 @@ function AllocateReduction(data::IControl,enduses,techs,ecs,areas,years)
     PERRRExo[enduse,tech,ec,area,year] = PERRRExo[enduse,tech,ec,area,year] +
       PERRef[enduse,tech,ec,area,year] * FractionRemovedAnnually[ec,area,year]
   end
+  print("\nPERRRExo:", PERRRExo[heat,gas,cement,qc,y2026])
 
   WriteDisk(db,"$Outpt/PERRRExo",PERRRExo)
 end
@@ -208,7 +215,7 @@ function IndPolicy(db)
   PolicyCost[ecs,areas,Yr(2026)] = 220
   PolicyCost[ecs,areas,Yr(2027)] = 247
   PolicyCost[ecs,areas,Yr(2028)] = 281
-
+  
   years = collect(Yr(2023):Yr(2026))
   for year in years, area in areas
     PolicyCost[ecs,area,year] = PolicyCost[ecs,area,year]/xInflation[area,year]
@@ -317,6 +324,8 @@ function IndPolicy(db)
   PolicyCost[ecs,areas,Yr(2026)] = 220
   PolicyCost[ecs,areas,Yr(2027)] = 247
   PolicyCost[ecs,areas,Yr(2028)] = 281
+  
+  PolicyCost[ecs,areas,Yr(2026)] = 619.657
 
   years = Yr(2026)
   for year in years, area in areas
