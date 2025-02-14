@@ -188,7 +188,7 @@ function IndPolicy(db)
   techs = Select(Tech,["LPG","Gas"])
   for year in years, area in areas, ec in ecs
     ReductionAdditional[ec,area,year] = ReductionAdditional[ec,area,year]/
-      1054.61*AnnualAdjustment[ec,area,year]
+      1.05461*AnnualAdjustment[ec,area,year]
   end
   
   AllocateReduction(data,Enduses,techs,ecs,areas,years);

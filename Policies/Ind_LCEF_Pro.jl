@@ -319,6 +319,7 @@ function IndPolicy(db)
   PolicyCost[ecs,areas,Yr(2028)] = 281
 
   years = Yr(2026)
+  PolicyCost[ecs,areas,years] = 619.657
   for year in years, area in areas
     PolicyCost[ecs,area,year] = PolicyCost[ecs,area,year]/xInflation[area,year]
   end
