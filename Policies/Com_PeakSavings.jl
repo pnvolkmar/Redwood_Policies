@@ -56,8 +56,8 @@ end
 function ComPolicy(db)
   data = CControl(; db)
   (; Input) = data
-  (; Area,ECs,Enduses,Tech) = data 
-  (; DmdRef,DmdTotal,DmFrac,ECCMap,SecMap,TotPkSav,xPkSav,xPkSavECC) = data
+  (; Area,ECC,EC,ECs,Enduses,Tech) = data 
+  (; DmdRef,DmdTotal,DmFrac,TotPkSav,xPkSav,xPkSavECC) = data
 
   # 
   # Input Commercial Electric Peak Savings for British Columbia
@@ -120,28 +120,26 @@ function ComPolicy(db)
   areas = Select(Area,["QC","BC"])
   years = collect(Yr(2024):Yr(2050))
   tech = Select(Tech,"Electric")
-  #
-  # Using SecMap == 2 instead of Com since unsure if latter is global in Julia code - Ian 02/03/25
-  #
-  eccs = findall(SecMap[:] .== 2)
+
   #
   # Total across enduses
   #
   for area in areas, year in years
     DmdTotal[area,year] = sum(DmdRef[enduse,tech,ec,area,year] for enduse in Enduses,ec in ECs)
-  end
-
+  
   #
   # Calcuate the fraction of electric tech's enduse demand served in each sector
   #
-  for enduse in Enduses, ec in ECs, area in areas, year in years
-    @finite_math DmFrac[enduse,ec,area,year] = DmdRef[enduse,tech,ec,area,year]/
+    for enduse in Enduses, ec in ECs
+      DmFrac[enduse,ec,area,year] = DmdRef[enduse,tech,ec,area,year]/
                                                DmdTotal[area,year] 
-    xPkSav[enduse,ec,area,year] = DmFrac[enduse,ec,area,year]*TotPkSav[area,year]
-  end
+      xPkSav[enduse,ec,area,year] = DmFrac[enduse,ec,area,year]*TotPkSav[area,year]
+    end
   
-  for ecc in eccs, area in areas, year in years
-    xPkSavECC[ecc,area,year] = sum(xPkSav[enduse,ec,area,year]*ECCMap[ec,ecc] for enduse in Enduses, ec in ECs)
+    for ec in ECs
+      ecc = Select(ECC,EC[ec])
+      xPkSavECC[ecc,area,year] = sum(xPkSav[enduse,ec,area,year] for enduse in Enduses)
+    end
   end
 
   WriteDisk(db,"$Input/xPkSav",xPkSav)

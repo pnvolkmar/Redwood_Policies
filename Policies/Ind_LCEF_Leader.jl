@@ -51,6 +51,7 @@ Base.@kwdef struct IControl
   DERRef::VariableArray{5} = ReadDisk(BCNameDB,"$Outpt/DER") # [Enduse,Tech,EC,Area,Year] Device Energy Requirement (mmBtu/Yr)
   DERReduction::VariableArray{5} = ReadDisk(db,"$Input/DERReduction") # [Enduse,Tech,EC,Area,Year] Fraction of Device Energy Removed after this Policy is added ((mmBtu/Yr)/(mmBtu/Yr))
   DERRRExo::VariableArray{5} = ReadDisk(db,"$Outpt/DERRRExo") # [Enduse,Tech,EC,Area,Year] Device Energy Exogenous Retrofits ((mmBtu/Yr)/Yr)
+  xInflation::VariableArray{2} = ReadDisk(db,"MInput/xInflation") # [Area,Year] Inflation Index ($/$)
 
   # Scratch Variables
   AnnualAdjustment::VariableArray{1} = zeros(Float64,length(Year)) # [Year] Adjustment for energy savings rebound
@@ -109,7 +110,8 @@ function IndPolicy(db::String)
   data = IControl(; db)
   (; Input) = data
   (; ECs,Enduse,Enduses,Nation,Tech) = data 
-  (; ANMap,AnnualAdjustment,DInvExo,DmdFrac,DmdRef,DmdTotal,ReductionAdditional,PolicyCost) = data
+  (; ANMap,AnnualAdjustment,DInvExo,DmdFrac,DmdRef,DmdTotal) = data
+  (;ReductionAdditional,PolicyCost,xInflation) = data
 
   #
   # Select Sets for Policy
@@ -201,9 +203,10 @@ function IndPolicy(db::String)
   # NC 06/20/2024
   # Split out PolicyCost using reference Dmd values. PInv only uses Process Heat.
   #
-  for enduse in Enduses, tech in techs, ec in ECs, area in areas, year in years
+  for enduse in enduses, tech in techs, ec in ECs, area in areas, year in years
     DmdFrac[enduse,tech,ec,area,year] = DmdRef[enduse,tech,ec,area,year]/DmdTotal[year]
-    DInvExo[enduse,tech,ec,area,year] = DInvExo[enduse,tech,ec,area,year]+PolicyCost[year]*DmdFrac[enduse,tech,ec,area,year]
+    DInvExo[enduse,tech,ec,area,year] = DInvExo[enduse,tech,ec,area,year]+PolicyCost[year]*
+                                        DmdFrac[enduse,tech,ec,area,year]/xInflation[area,Yr(2015)]
   end
   WriteDisk(db,"$Input/DInvExo",DInvExo)
 
