@@ -80,13 +80,16 @@ function AllocateReduction(data::IControl,enduses,techs,ecs,areas,years)
   #
   # Accumulate ReductionAdditional and apply to reference case demands
   #  
-  for year in years, area in areas, ec in ecs
+  for year in years
+    for area in areas, ec in ecs
     ReductionAdditional[ec,area,year] = max((ReductionAdditional[ec,area,year] - 
-      ReductionTotal[ec,area,year-1]),0.0)
-    ReductionTotal[ec,area,year] = ReductionAdditional[ec,area,year] + 
-      ReductionTotal[ec,area,year-1]
+    ReductionTotal[ec,area,year-1]),0.0)
+    end
+    for area in areas, ec in ecs
+      ReductionTotal[ec,area,year] = ReductionAdditional[ec,area,year] + 
+        ReductionTotal[ec,area,year-1]
+    end
   end
-
   #
   # Fraction Energy Removed each Year
   #  

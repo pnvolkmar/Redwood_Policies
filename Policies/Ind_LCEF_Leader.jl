@@ -201,8 +201,10 @@ function IndPolicy(db::String)
   # NC 06/20/2024
   # Split out PolicyCost using reference Dmd values. PInv only uses Process Heat.
   #
-  for enduse in Enduses, tech in techs, ec in ECs, area in areas, year in years
+  for enduse in enduses, tech in techs, ec in ECs, area in areas, year in years
     DmdFrac[enduse,tech,ec,area,year] = DmdRef[enduse,tech,ec,area,year]/DmdTotal[year]
+  end
+  for enduse in enduses, tech in techs, ec in ECs, area in areas, year in years
     DInvExo[enduse,tech,ec,area,year] = DInvExo[enduse,tech,ec,area,year]+PolicyCost[year]*DmdFrac[enduse,tech,ec,area,year]
   end
   WriteDisk(db,"$Input/DInvExo",DInvExo)
