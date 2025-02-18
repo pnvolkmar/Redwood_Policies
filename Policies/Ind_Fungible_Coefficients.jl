@@ -57,7 +57,7 @@ Base.@kwdef struct IControl
   ECFP0Ref::VariableArray{4} = ReadDisk(BCNameDB,"$Outpt/ECFP",First) # [Enduse,Tech,EC,Area,First] Fuel Price ($/mmBtu)
   ECFPFuelRef::VariableArray{4} = ReadDisk(BCNameDB,"$Outpt/ECFPFuel") # [Fuel,EC,Area,Year] Fuel Price ($/mmBtu)
   Inflation::VariableArray{2} = ReadDisk(db,"MOutput/Inflation") # [Area,Year] Inflation Index ($/$)
-  Inflation0::VariableArray{1} = ReadDisk(db,"MInput/xInflation",First) # [Area,Year] Inflation Index ($/$)
+  Inflation0::VariableArray{1} = ReadDisk(db,"MOutput/Inflation",First) # [Area,Year] Inflation Index ($/$)
   xDmFrac::VariableArray{6} = ReadDisk(db,"$Input/xDmFrac") # [Enduse,Fuel,Tech,EC,Area,Year] Energy Demands Fuel/Tech Split (Btu/Btu)
 
   # Scratch Variables
@@ -139,16 +139,25 @@ function FungibleCalib(data,enduse,fuels,tech,ec,area,year)
   (; ECFPFuelRef,Inflation,Inflation0,xDmFrac) = data
  
   for fuel in fuels
-    @finite_math DmFracMAW[enduse,fuel,tech,ec,area] =
-      exp(DmFracVF[enduse,fuel,tech,ec,area]*log((ECFPFuelRef[fuel,ec,area,year]/Inflation[area,year])/
-        (ECFP0Ref[enduse,tech,ec,area]/Inflation0[area])))
+    @finite_math DmFracMAW[enduse,fuel,tech,ec,area] =exp(
+      DmFracVF[enduse,fuel,tech,ec,area]*log(
+        (ECFPFuelRef[fuel,ec,area,year]/Inflation[area,year])/
+        (ECFP0Ref[enduse,tech,ec,area]/Inflation0[area])
+      )
+    )
+  end
 
+  for fuel in fuels
     @finite_math DmFracMU[enduse,fuel,tech,ec,area] = 
       xDmFrac[enduse,fuel,tech,ec,area,year]/DmFracMAW[enduse,fuel,tech,ec,area]
   end
-  
-  @.  @finite_math DmFracMSM0[enduse,fuels,tech,ec,area,year] = 
-    log(DmFracMU[enduse,fuels,tech,ec,area]/maximum(DmFracMU[enduse,fuel,tech,ec,area] for fuel in fuels))
+  loc1 = maximum(DmFracMU[enduse,f,tech,ec,area] for f in fuels)
+  # print(loc1)
+  if loc1 != 0
+    for fuel in fuels
+      DmFracMSM0[enduse,fuel,tech,ec,area,year] = log(DmFracMU[enduse,fuel,tech,ec,area]/loc1)
+    end
+  end
   
 end #FungibleCalib
 
@@ -161,13 +170,13 @@ function ControlFungibleCalib(data,techs,ecs,areas,years)
   end
     
   for year in years, area in areas, ec in ecs, tech in techs, enduse in Enduses
-    fuelsxDMFrac = Select(xDmFrac[enduse,Fuels,tech,ec,area,year],>(0.0))
-    fuelsECFPFuel = Select(ECFPFuelRef[Fuels,ec,area,year],>(0.0))
+    fuelsxDMFrac = findall(xDmFrac[enduse,Fuels,tech,ec,area,year].>0.0)
+    fuelsECFPFuel = findall(ECFPFuelRef[Fuels,ec,area,year].>0.0)
     fuels = intersect(fuelsxDMFrac,fuelsECFPFuel)
     if HasValues(fuels)
       FungibleCalib(data,enduse,fuels,tech,ec,area,year)
-    else
-      DmFracMSM0[enduse,fuels,tech,ec,area,year] = DmFracMSM0[enduse,fuels,tech,ec,area,year-1]
+    else # Note, Promula defaults to select everything, so value gets assigned for all Fuels
+      DmFracMSM0[enduse,Fuels,tech,ec,area,year] = DmFracMSM0[enduse,Fuels,tech,ec,area,year-1]
     end
     
   end
@@ -181,11 +190,21 @@ function ControlFlow(data)
   #
   # To save execution time, just do the sectors needed. - Jeff Amlin 09/06/21
   #     
-  area = Select(Area,"AB")
-  ecs = Select(EC,["Petrochemicals","Petroleum","OilSandsUpgraders"])
-  tech = Select(Tech,"Gas")
-  years = collect(Yr(2024):Yr(2030))
-  ControlFungibleCalib(data,tech,ecs,area,years)
+  # area = Select(Area,"AB")
+  # ecs = Select(EC,["Petrochemicals","Petroleum","OilSandsUpgraders"])
+  # tech = Select(Tech,"Gas")
+  # years = collect(Yr(2024):Yr(2030))
+  areas = Areas
+  ecs = ECs
+  techs = Techs
+  years = collect(Yr(2023):Final)
+  ControlFungibleCalib(data,techs,ecs,areas,years)
+  
+  for year in years, area in areas, tech in techs, ec in ecs, fuel in Fuels, enduse in Enduses
+    if abs(DmFracMSM0[enduse,fuel,tech,ec,area,year]) < 1e-8
+      DmFracMSM0[enduse,fuel,tech,ec,area,year] = 0.0
+    end
+  end
 
 end # ControlFlow
 

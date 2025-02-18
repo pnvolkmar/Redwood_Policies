@@ -62,22 +62,23 @@ function IndPolicy(db)
   # With this in mind the original year that hydrogen energy demand will be accepted in Alberta is in
   # 2025. This assumption may need to be revisited throughout the Ref24 update cycle.
   #
-  AB = Select(Area,"AB")
-  ecs = Select(EC,["Petrochemicals","Petroleum","OilSandsUpgraders"])
+  AB    = Select(Area,"AB")
+  ecs   = Select(EC,["Petrochemicals","Petroleum","OilSandsUpgraders"])
   fuels = Select(Fuel,["Hydrogen","NaturalGas","NaturalGasRaw","RNG","StillGas"])
-  Gas = Select(Tech,"Gas")
-  Hydrogen = Select(Fuel,"Hydrogen")
-  NaturalGas = Select(Fuel,"NaturalGas")
+  Gas   = Select(Tech,"Gas")
+  Heat  = Select(Enduse,"Heat")
+  
+  Hydrogen      = Select(Fuel,"Hydrogen")
+  NaturalGas    = Select(Fuel,"NaturalGas")
   NaturalGasRaw = Select(Fuel,"NaturalGasRaw")
-  RNG = Select(Fuel,"RNG")
-  StillGas = Select(Fuel,"StillGas")
-  Electric = Select(Fuel,"Electric")
-  LPG = Select(Fuel,"LPG")
+  RNG           = Select(Fuel,"RNG")
+  StillGas      = Select(Fuel,"StillGas")
+  Electric      = Select(Fuel,"Electric")
+  LPG           = Select(Fuel,"LPG")
 
-  Petrochemicals =    Select(EC,"Petrochemicals")
-  Petroleum =         Select(EC,"Petroleum")
+  Petrochemicals    = Select(EC,"Petrochemicals")
+  Petroleum         = Select(EC,"Petroleum")
   OilSandsUpgraders = Select(EC,"OilSandsUpgraders")
-  Heat = Select(Enduse,"Heat")
 
   # Petrochemicals          2025
   xDmFrac[Heat,Hydrogen,     Gas,Petrochemicals,   AB,Yr(2025)] = 0.0776
@@ -94,11 +95,11 @@ function IndPolicy(db)
   xDmFrac[Heat,StillGas,     Gas,Petroleum,        AB,Yr(2025)] = 0.6704
 
   # OilSandsUpgraders       2025
-  xDmFrac[Heat,Hydrogen,Gas,OilSandsUpgraders,AB,Yr(2025)] = 0.0462
-  xDmFrac[Heat,NaturalGas,Gas,OilSandsUpgraders,AB,Yr(2025)] = 0.2237
+  xDmFrac[Heat,Hydrogen     ,Gas,OilSandsUpgraders,AB,Yr(2025)] = 0.0462
+  xDmFrac[Heat,NaturalGas   ,Gas,OilSandsUpgraders,AB,Yr(2025)] = 0.2237
   xDmFrac[Heat,NaturalGasRaw,Gas,OilSandsUpgraders,AB,Yr(2025)] = 0.0000
-  xDmFrac[Heat,RNG,Gas,OilSandsUpgraders,AB,Yr(2025)] = 0.0000
-  xDmFrac[Heat,StillGas,Gas,OilSandsUpgraders,AB,Yr(2025)] = 0.7001
+  xDmFrac[Heat,RNG          ,Gas,OilSandsUpgraders,AB,Yr(2025)] = 0.0000
+  xDmFrac[Heat,StillGas     ,Gas,OilSandsUpgraders,AB,Yr(2025)] = 0.7001
 
   for ec in ecs, fuel in fuels, enduse in Enduses
     xDmFrac[enduse,fuel,Gas,ec,AB,Yr(2025)] = xDmFrac[Heat,fuel,Gas,ec,AB,Yr(2025)]
@@ -234,11 +235,11 @@ function IndPolicy(db)
   for year in years, fuel in fuels, enduse in Enduses
     xDmFrac[enduse,fuel,Gas,Petrochemicals,AB,year] = xDmFrac[enduse,fuel,Gas,Petrochemicals,AB,Yr(2027)]
   end
-  years = collect(Yr(2031):Yr(Final))
+  years = collect(Yr(2031):Final)
   for year in years, enduse in Enduses
     xDmFrac[enduse,Hydrogen,Gas,Petrochemicals,AB,year] = xDmFrac[enduse,Hydrogen,Gas,Petrochemicals,AB,year-1]*0.96
   end
-  years = collect(Yr(2031):Yr(Final))
+  years = collect(Yr(2031):Final)
   for year in years, enduse in Enduses
     xDmFrac[enduse,NaturalGas,Gas,Petrochemicals,AB,year] = xDmFrac[enduse,NaturalGas,Gas,Petrochemicals,AB,year-1]*1.04
   end
