@@ -120,10 +120,10 @@ end # AllocateReduction
 function IndPolicy(db)
   data = IControl(; db)
   (; Input) = data
-  (; Area,EC,Enduses,Enduse) = data
+  (; Area,EC,ECs,Enduse,Enduses) = data
   (; Nation,Tech) = data
   (; AnnualAdjustment,DmdFrac,DmdRef,DmdTotal) = data
-  (; PolicyCost,ReductionAdditional,xInflation,PInvExo) = data
+  (; PInvExo,PolicyCost,ReductionAdditional,xInflation) = data
 
   @. AnnualAdjustment = 1.0
 
@@ -149,7 +149,12 @@ function IndPolicy(db)
   #  
   CN = Select(Nation,"CN")
   areas = Select(Area,"QC")
-  ecs = Select(EC,!=("OnFarmFuelUse"))
+  #
+  # TODOJulia: 'Select EC if ECDS ne "OnFarmFuelUse"' doesn't work in Promula version (it should be ECKey)
+  # Select all ECs to match Promula for now - Ian 02/14/25
+  #
+  #ecs = Select(EC,!=("OnFarmFuelUse"))
+  ecs = ECs
 
   #
   # Apply an annual adjustment to reductions to compensate for 'rebound' from less retirements

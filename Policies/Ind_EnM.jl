@@ -47,8 +47,13 @@ Base.@kwdef struct IControl
   Years::Vector{Int} = collect(Select(Year))
 
   ANMap::VariableArray{2} = ReadDisk(db,"E2020DB/ANMap") # [Area,Nation] Map between Area and Nation
-  DmdRef::VariableArray{5} = ReadDisk(BCNameDB,"$Outpt/Dmd") # [Enduse,Tech,EC,Area,Year] Demand (TBtu/Yr)
-  DERRef::VariableArray{5} = ReadDisk(BCNameDB,"$Outpt/DER") # [Enduse,Tech,EC,Area,Year] Device Energy Requirement (mmBtu/Yr)
+  #
+  # TODOJulia: Promula file doesn't actually read in values from BCName - Ian 02/14/25
+  #
+  #DmdRef::VariableArray{5} = ReadDisk(BCNameDB,"$Outpt/Dmd") # [Enduse,Tech,EC,Area,Year] Demand (TBtu/Yr)
+  #DERRef::VariableArray{5} = ReadDisk(BCNameDB,"$Outpt/DER") # [Enduse,Tech,EC,Area,Year] Device Energy Requirement (mmBtu/Yr)
+  DmdRef::VariableArray{5} = ReadDisk(db,"$Outpt/Dmd") # [Enduse,Tech,EC,Area,Year] Demand (TBtu/Yr)
+  DERRef::VariableArray{5} = ReadDisk(db,"$Outpt/DER") # [Enduse,Tech,EC,Area,Year] Device Energy Requirement (mmBtu/Yr)
   DERReduction::VariableArray{5} = ReadDisk(db,"$Input/DERReduction") # [Enduse,Tech,EC,Area,Year] Fraction of Device Energy Removed after this Policy is added ((mmBtu/Yr)/(mmBtu/Yr))
   DERReductionStart::VariableArray{5} = ReadDisk(db,"$Input/DERReduction") # [Enduse,Tech,EC,Area,Year] Fraction of Device Energy Removed from Previous Policies ((mmBtu/Yr)/(mmBtu/Yr))
   DERRRExo::VariableArray{5} = ReadDisk(db,"$Outpt/DERRRExo") # [Enduse,Tech,EC,Area,Year] Process Energy Exogenous Retrofits ((mmBtu/Yr)/Yr)
@@ -68,13 +73,20 @@ Base.@kwdef struct IControl
   ReductionTotal::VariableArray{1} = zeros(Float64,length(Year)) # [Year] Demand Reduction from this Policy Cumulative over Years (TBtu/Yr)
 end
 
-function AllocateReduction(data,DmdTotal,enduses,techs,ecs,years,areas)
+function AllocateReduction(data,enduses,techs,ecs,areas,years)
   (; db,Outpt) = data
   (; DERRef) = data
-  (; DERRRExo,DmdRef) = data
+  (; DERRRExo,DmdRef,DmdTotal) = data
   (; FractionRemovedAnnually) = data
   (; ReductionAdditional,ReductionTotal) = data
 
+  #
+  # Total Demands
+  #  
+  for year in years
+    DmdTotal[year] = sum(DmdRef[enduse,tech,ec,area,year] for enduse in enduses, 
+                         tech in techs, ec in ecs, area in areas)
+  end
 
   #
   # Accumulate ReductionAdditional and apply to reference case demands
@@ -99,7 +111,7 @@ function AllocateReduction(data,DmdTotal,enduses,techs,ecs,years,areas)
   #  
   for tech in techs, ec in ecs, area in areas, year in years, enduse in enduses
     DERRRExo[enduse,tech,ec,area,year] = DERRRExo[enduse,tech,ec,area,year] +
-      DERRef[enduse,tech,ec,area,year] * FractionRemovedAnnually[year]
+      (DERRef[enduse,tech,ec,area,year] * FractionRemovedAnnually[year])
   end
 
   WriteDisk(db,"$Outpt/DERRRExo",DERRRExo)
@@ -109,7 +121,7 @@ end #AllocateReduction
 function IndPolicy(db)
   data = IControl(; db)
   (; Input) = data
-  (; EC,ECs,Enduse) = data
+  (; ECs,Enduse) = data
   (; Nation,Tech) = data
   (; ANMap,AnnualAdjustment) = data
   (; DInvExo,DmdFrac,DmdRef,DmdTotal) = data
@@ -121,7 +133,7 @@ function IndPolicy(db)
   CN = Select(Nation,"CN");
   areas = findall(ANMap[:,CN] .== 1.0)
   enduses = Select(Enduse,"Heat")
-  Heat = Select(Enduse,"Heat")
+  ecs = ECs
   #
   # Policy results is a reduction in demand (PJ) converted to TBtu
   #
@@ -181,20 +193,12 @@ function IndPolicy(db)
   tech_s = Select(Tech,!=("Steam"))
   techs = intersect(tech_e,tech_s)
 
-  #
-  # Total Demands
-  #  
-  for year in years
-    DmdTotal[year] = sum(DmdRef[Heat,tech,ec,area,year] for tech in techs,
-      ec in ECs, area in areas)
-  end
-
+  years = collect(Yr(2022):Yr(2050))
   for year in years
     ReductionAdditional[year] = ReductionAdditional[year]/1.05461*AnnualAdjustment[year]
   end
 
-
-  AllocateReduction(data,DmdTotal,enduses,techs,ECs,years,areas)
+  AllocateReduction(data,enduses,techs,ecs,areas,years)
 
   #
   # Program Costs
@@ -212,14 +216,14 @@ function IndPolicy(db)
   #
   # Split out PolicyCost using reference Dmd values. PInv only uses Process Heat.
   #
-  for year in years, area in areas, ec in ECs, tech in techs
-    @finite_math DmdFrac[Heat,tech,ec,area,year] = DmdRef[Heat,tech,ec,area,year]/
+  for year in years, area in areas, ec in ecs, tech in techs, enduse in enduses
+    @finite_math DmdFrac[enduse,tech,ec,area,year] = DmdRef[enduse,tech,ec,area,year]/
       DmdTotal[year]
 
   end
-  for year in years, area in areas, ec in ECs, tech in techs
-    DInvExo[Heat,tech,ec,area,year] = DInvExo[Heat,tech,ec,area,year]+
-      (PolicyCost[year]*DmdFrac[Heat,tech,ec,area,year])/xInflation[area,Yr(2015)]
+  for year in years, area in areas, ec in ecs, tech in techs, enduse in enduses
+    DInvExo[enduse,tech,ec,area,year] = DInvExo[enduse,tech,ec,area,year]+
+      (PolicyCost[year]*DmdFrac[enduse,tech,ec,area,year])/xInflation[area,Yr(2015)]
   end
 
   WriteDisk(db,"$Input/DInvExo",DInvExo)
