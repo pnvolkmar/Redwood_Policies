@@ -82,7 +82,7 @@ function AllocateReduction(data::IControl,enduses,techs,ecs,areas,years)
   qc = Select(Area, "QC")
   y2026  = Yr(2026)
   
-  print("\nPERRRExo:", PERRRExo[heat,gas,cement,qc,y2026])
+  # print("\nPERRRExo:", PERRRExo[heat,gas,cement,qc,y2026])
   #
   # Total Demands
   #  
@@ -115,7 +115,7 @@ function AllocateReduction(data::IControl,enduses,techs,ecs,areas,years)
     PERRRExo[enduse,tech,ec,area,year] = PERRRExo[enduse,tech,ec,area,year] +
       PERRef[enduse,tech,ec,area,year] * FractionRemovedAnnually[ec,area,year]
   end
-  print("\nPERRRExo:", PERRRExo[heat,gas,cement,qc,y2026])
+  # print("\nPERRRExo:", PERRRExo[heat,gas,cement,qc,y2026])
 
   WriteDisk(db,"$Outpt/PERRRExo",PERRRExo)
 end
