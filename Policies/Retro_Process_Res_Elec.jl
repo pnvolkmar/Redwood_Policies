@@ -17,12 +17,12 @@ import ...SmallModel: @finite_math,finite_inverse,finite_divide,finite_power,fin
 const VariableArray{N} = Array{Float64,N} where {N}
 const SetArray = Vector{String}
 
-  Base.@kwdef struct RControl
-    db::String
-    
-    CalDB::String = "RCalDB"
-    Input::String = "RInput"
-    Outpt::String = "ROutput"
+Base.@kwdef struct RControl
+  db::String
+  
+  CalDB::String = "RCalDB"
+  Input::String = "RInput"
+  Outpt::String = "ROutput"
   BCNameDB::String = ReadDisk(db,"E2020DB/BCNameDB") #  Base Case Name
 
   Area::SetArray = ReadDisk(db,"E2020DB/AreaKey")
