@@ -64,14 +64,16 @@ Base.@kwdef struct EControl
   # URetireOld     'Old Retirement Date (Year)'
 end
 
-function GetUnitData(data,UCode,UName,URetire)
+function GetUnitData(data,UCode,UName,URetire,years)
   (; UnCode,UnRetire) = data
   unit = Select(UnCode,filter(x -> x in UnCode,[UCode]))
   if unit == []
     @debug("Could not match UnCode $UCode")
   else
     if URetire < UnRetire[unit,Future][1]
-      UnRetire[unit,Years] = URetire
+      for unit in unit, year in years
+        UnRetire[unit,year] = URetire
+      end
     end
     
   end
@@ -145,30 +147,30 @@ function ElecPolicy(db)
   # No BD4 or BD5 due to SK equivalency agreement.
   #
   #                  UnCode           UnitName         UnRetire
-  GetUnitData(data,"AB00029600601","Battle River 3",2020)
-  GetUnitData(data,"AB00029600602","Battle River 4",2026)
-  GetUnitData(data,"AB00029600603","Battle River 5",2030)
-  GetUnitData(data,"AB00001300201","Genesee 1",     2045)
-  GetUnitData(data,"AB00001300202","Genesee 2",     2040)
-  GetUnitData(data,"AB00001300203","Genesee 3",     2056)
-  GetUnitData(data,"AB00002201501","Keephills 1",   2030)
-  GetUnitData(data,"AB00002201502","Keephills 2",   2030)
-  GetUnitData(data,"AB_New_26",    "Keephills 3",   2062)
-  GetUnitData(data,"AB00029600801","Sheerness 1",   2037)
-  GetUnitData(data,"AB00029600802","Sheerness 2",   2041)
-  GetUnitData(data,"AB00002201601","Sundance 1",    2020)
-  GetUnitData(data,"AB00002201602","Sundance 2",    2020)
-  GetUnitData(data,"AB00002201603","Sundance 3",    2027)
-  GetUnitData(data,"AB00002201604","Sundance 4",    2028)
-  GetUnitData(data,"AB00002201605","Sundance 5",    2029)
-  GetUnitData(data,"AB00002201606","Sundance 6",    2030)
-  GetUnitData(data,"AB00029600701","H R Milner",    2020)
-  GetUnitData(data,"MB00005401701","Brandon",       2030)
-  GetUnitData(data,"NB00006601301","Belledune",     2044)
-  GetUnitData(data,"SK00015301206","Boundary Dam 6",2028)
-  GetUnitData(data,"SK00015301301","Poplar River 1",2030)
-  GetUnitData(data,"SK00015301302","Poplar River 2",2030)
-  GetUnitData(data,"SK00015301501","Shand",         2043)
+  GetUnitData(data,"AB00029600601","Battle River 3",2020, years)
+  GetUnitData(data,"AB00029600602","Battle River 4",2026, years)
+  GetUnitData(data,"AB00029600603","Battle River 5",2030, years)
+  GetUnitData(data,"AB00001300201","Genesee 1",     2045, years)
+  GetUnitData(data,"AB00001300202","Genesee 2",     2040, years)
+  GetUnitData(data,"AB00001300203","Genesee 3",     2056, years)
+  GetUnitData(data,"AB00002201501","Keephills 1",   2030, years)
+  GetUnitData(data,"AB00002201502","Keephills 2",   2030, years)
+  GetUnitData(data,"AB_New_26",    "Keephills 3",   2062, years)
+  GetUnitData(data,"AB00029600801","Sheerness 1",   2037, years)
+  GetUnitData(data,"AB00029600802","Sheerness 2",   2041, years)
+  GetUnitData(data,"AB00002201601","Sundance 1",    2020, years)
+  GetUnitData(data,"AB00002201602","Sundance 2",    2020, years)
+  GetUnitData(data,"AB00002201603","Sundance 3",    2027, years)
+  GetUnitData(data,"AB00002201604","Sundance 4",    2028, years)
+  GetUnitData(data,"AB00002201605","Sundance 5",    2029, years)
+  GetUnitData(data,"AB00002201606","Sundance 6",    2030, years)
+  GetUnitData(data,"AB00029600701","H R Milner",    2020, years)
+  GetUnitData(data,"MB00005401701","Brandon",       2030, years)
+  GetUnitData(data,"NB00006601301","Belledune",     2044, years)
+  GetUnitData(data,"SK00015301206","Boundary Dam 6",2028, years)
+  GetUnitData(data,"SK00015301301","Poplar River 1",2030, years)
+  GetUnitData(data,"SK00015301302","Poplar River 2",2030, years)
+  GetUnitData(data,"SK00015301501","Shand",         2043, years)
 
   WriteDisk(db,"EGInput/UnRetire",UnRetire)
 end
