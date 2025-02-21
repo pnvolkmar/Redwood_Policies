@@ -1220,13 +1220,4 @@ if abspath(PROGRAM_FILE) == @__FILE__
   PolicyControl(DB)
 end
 
-function PolicyControl(db)
-  @info "Electricity_Patch.jl - PolicyControl"
-  ElecPolicy(db)
-end
-
-if abspath(PROGRAM_FILE) == @__FILE__
-  PolicyControl(DB)
-end
-
 end

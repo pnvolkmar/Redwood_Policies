@@ -109,7 +109,7 @@ function IndPolicy(db)
     CMSM0[enduse,tech,ctech,ec,BC,year] = CMSM0[enduse,tech,ctech,ec,BC,year]-
       CMSM0Max[enduse,ctech,ec,BC,year]
   end
-
+  CMSM0[abs.(CMSM0) .< 1e-8] .= 0
   WriteDisk(db,"$CalDB/CMSM0",CMSM0);
 end
 

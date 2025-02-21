@@ -232,6 +232,7 @@ function IndPolicy(db)
 
   WriteDisk(db,"$Input/CnvrtEU",CnvrtEU)
   WriteDisk(db,"$Input/CFraction",CFraction)
+  CMSM0[abs.(CMSM0) .< 1e-8] .= 0
   WriteDisk(db,"$CalDB/CMSM0",CMSM0)
 end
 
