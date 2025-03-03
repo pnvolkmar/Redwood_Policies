@@ -44,6 +44,7 @@ Base.@kwdef struct RControl
 
   ANMap::VariableArray{2} = ReadDisk(db,"E2020DB/ANMap")   # [Area,Nation] Map between Area and Nation
   Inflation0::VariableArray{1} = ReadDisk(db,"MInput/xInflation",First) # [Area,Year] Inflation Index ($/$)
+  MCFU::VariableArray{5} = ReadDisk(db,"$Outpt/MCFU")     # [Enduse,Tech,EC,Area,Year] Marginal Cost of Technology Use ($/mmBtu)
   MCFUBase::VariableArray{5} = ReadDisk(BCNameDB,"$Outpt/MCFU")     # [Enduse,Tech,EC,Area,Year] Marginal Cost of Technology Use ($/mmBtu)
   MCFU0Base::VariableArray{4} = ReadDisk(BCNameDB,"$Outpt/MCFU",First) # [Enduse,Tech,EC,Area,Year] Marginal Cost of Technology Use ($/mmBtu)
   MMSF::VariableArray{5} = ReadDisk(db,"$Outpt/MMSF")     # [Enduse,Tech,EC,Area,Year] Market Share Fraction ($/$)
@@ -103,7 +104,7 @@ end
 function MarketShareNonPriceFactors(data::RControl)
   (; CalDB,db) = data
   (; Areas,ECs,Enduses,Techs) = data
-  (; Inflation0,MAW,MCFUBase,MCFU0Base) = data
+  (; Inflation0,MAW,MCFU,MCFUBase,MCFU0Base) = data
   (; MMSF,MMSFx,MMSM0,MSMM,MU,MVF) = data
   (; PEE,PEE0Base,xInflation,xMMSF) = data
   (; MAWCheck,TAWCheck,MMSFCheck) = data

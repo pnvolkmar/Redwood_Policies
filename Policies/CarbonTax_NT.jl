@@ -338,7 +338,7 @@ function ElecPolicy(db)
   # xETAPr[market,Yr(2019)] = 20.00/xExchangeRateNation[CN,Yr(2019)]/xInflationNation[US,Yr(2019)]*4/12
   # xETAPr[market,Yr(2020)] = 30.00/xExchangeRateNation[CN,Yr(2020)]/xInflationNation[US,Yr(2020)]
   # xETAPr[market,Yr(2021)] = 40.00/xExchangeRateNation[CN,Yr(2021)]/xInflationNation[US,Yr(2021)]
-  xETAPr[market,Yr(2022)] = 50.00/xExchangeRateNation[CN,Yr(2022)]/xInflationNation[US,Yr(2022)]
+  # xETAPr[market,Yr(2022)] = 50.00/xExchangeRateNation[CN,Yr(2022)]/xInflationNation[US,Yr(2022)]
   xETAPr[market,Yr(2023)] = 65.00/xExchangeRateNation[CN,Yr(2023)]/xInflationNation[US,Yr(2023)]
   xETAPr[market,Yr(2024)] = 80.00/xExchangeRateNation[CN,Yr(2024)]/xInflationNation[US,Yr(2024)]
   xETAPr[market,Yr(2025)] = 95.00/xExchangeRateNation[CN,Yr(2025)]/xInflationNation[US,Yr(2025)]
@@ -347,7 +347,7 @@ function ElecPolicy(db)
   xETAPr[market,Yr(2028)] = 140.00/xExchangeRateNation[CN,Yr(2028)]/xInflationNation[US,Yr(2028)]
   xETAPr[market,Yr(2029)] = 155.00/xExchangeRateNation[CN,Yr(2029)]/xInflationNation[US,Yr(2029)]
   years0 = collect(Yr(2030):YrFinal)
-  for year in years
+  for year in years0
     xETAPr[market,year] = 170.00/xExchangeRateNation[CN,year]/xInflationNation[US,year]
   end
 
