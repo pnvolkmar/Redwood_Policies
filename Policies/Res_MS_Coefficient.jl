@@ -45,6 +45,7 @@ Base.@kwdef struct RControl
   ANMap::VariableArray{2} = ReadDisk(db,"E2020DB/ANMap")   # [Area,Nation] Map between Area and Nation
   Inflation0::VariableArray{1} = ReadDisk(db,"MInput/xInflation",First) # [Area,Year] Inflation Index ($/$)
   MCFU::VariableArray{5} = ReadDisk(db,"$Outpt/MCFU")     # [Enduse,Tech,EC,Area,Year] Marginal Cost of Technology Use ($/mmBtu)
+  MCFU0::VariableArray{4} = ReadDisk(db,"$Outpt/MCFU",First)     # [Enduse,Tech,EC,Area,Year] Marginal Cost of Technology Use ($/mmBtu)
   MCFUBase::VariableArray{5} = ReadDisk(BCNameDB,"$Outpt/MCFU")     # [Enduse,Tech,EC,Area,Year] Marginal Cost of Technology Use ($/mmBtu)
   MCFU0Base::VariableArray{4} = ReadDisk(BCNameDB,"$Outpt/MCFU",First) # [Enduse,Tech,EC,Area,Year] Marginal Cost of Technology Use ($/mmBtu)
   MMSF::VariableArray{5} = ReadDisk(db,"$Outpt/MMSF")     # [Enduse,Tech,EC,Area,Year] Market Share Fraction ($/$)
@@ -52,6 +53,7 @@ Base.@kwdef struct RControl
   MSMM::VariableArray{5} = ReadDisk(db,"$Input/MSMM")     # [Enduse,Tech,EC,Area,Year] Non-Price Market Share Factor Mult.($/$)
   MVF::VariableArray{5} = ReadDisk(db,"$CalDB/MVF")       # [Enduse,Tech,EC,Area,Year] Market Share Variance Factor ($/$)
   PEE::VariableArray{5} = ReadDisk(db,"$Outpt/PEE")       # [Enduse,Tech,EC,Area,Year] Process Efficiency ($/Btu)
+  PEE0::VariableArray{4} = ReadDisk(db,"$Outpt/PEE",First) # [Enduse,Tech,EC,Area,Year] Process Efficiency ($/Btu)
   PEE0Base::VariableArray{4} = ReadDisk(BCNameDB,"$Outpt/PEE",First) # [Enduse,Tech,EC,Area,Year] Process Efficiency ($/Btu)
   PEM::VariableArray{3} = ReadDisk(db,"$CalDB/PEM")       # [Enduse,EC,Area] Process Efficiency ($/Btu)
   PEMBase::VariableArray{3} = ReadDisk(BCNameDB,"$CalDB/PEM")       # [Enduse,EC,Area] Process Efficiency ($/Btu)
@@ -104,9 +106,9 @@ end
 function MarketShareNonPriceFactors(data::RControl)
   (; CalDB,db) = data
   (; Areas,ECs,Enduses,Techs) = data
-  (; Inflation0,MAW,MCFU,MCFUBase,MCFU0Base) = data
+  (; Inflation0,MAW,MCFU,MCFU0,MCFUBase,MCFU0Base) = data
   (; MMSF,MMSFx,MMSM0,MSMM,MU,MVF) = data
-  (; PEE,PEE0Base,xInflation,xMMSF) = data
+  (; PEE,PEE0,PEE0Base,xInflation,xMMSF) = data
   (; MAWCheck,TAWCheck,MMSFCheck) = data
 
   InputData(data)
