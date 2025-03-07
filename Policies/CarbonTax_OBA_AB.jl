@@ -73,6 +73,8 @@ Base.@kwdef struct EControl
   FacSw::VariableArray{1} = ReadDisk(db,"SInput/FacSw") # [Market] Facility Level Intensity Target Switch (1=Facility Target)
   FBuyFr::VariableArray{2} = ReadDisk(db,"SInput/FBuyFr") # [Market,Year] Federal (Domestic) Permits Fraction Bought (Tonnes/Tonnes)
   GoalPolSw::VariableArray{1} = ReadDisk(db,"SInput/GoalPolSw") # [Market] Pollution Goal Switch (1=Gratis Permits,0=Exogenous)
+  # TODO fix GPEUSw to be dimensioned by market on the database. 
+  # GPEUSw::VariableArray{1} = ReadDisk(db,"SInput/GPEUSw") # [Market] Gratis Permit Allocation Switch (1=Grandfather, 2=Output, 0=Exogenous)
   GratSw::VariableArray{1} = ReadDisk(db,"SInput/GratSw") # [Market] Gratis Permit Allocation Switch (1=Grandfather,2=Output,0=Exogenous)
   ISaleSw::VariableArray{2} = ReadDisk(db,"SInput/ISaleSw") # [Market,Year] Switch for Unlimited Sales (1=International Permits,2=Domestic Permits)
   OBAFraction::VariableArray{3} = ReadDisk(db,"SInput/OBAFraction") # [ECC,Area,Year] Output-Based Allocation Fraction (Tonne/Tonne)
@@ -127,8 +129,10 @@ Base.@kwdef struct EControl
   OBACogen::VariableArray{1} = zeros(Float64,length(Year)) # [Year] Output-Based Allocations for Cogeneration Generation (Tonnes/GWh)
   OBAElectric::VariableArray{3} = zeros(Float64,length(Plant),length(FuelEP),length(Year)) # [Plant,FuelEP,Year] Output-Based Allocations for Electric Generation (Tonnes/GWh)
   OBANaturalGasNew::VariableArray{1} = zeros(Float64,length(Year)) # [Year] Output-Based Allocations for New Natural Gas Generation (Tonnes/GWh)
+  OBAOffsets::VariableArray{2} = zeros(Float64,length(Plant),length(Year)) # [Plant,Year] Output-Based Allocations for Electric Generation (Tonnes/GWh)
   OBARawNG::VariableArray{4} = zeros(Float64,length(ECC),length(Poll),length(PCov),length(Year)) # [ECC,Poll,PCov,Year] Output-Based Allocations for Raw Natural Gas (Tonnes/Driver)
   OBASpecial::VariableArray{2} = zeros(Float64,length(ECC),length(Year)) # [ECC,Year] Output-Based Allocations for Special Sectors (Tonnes/Driver)
+  OffsetConv::VariableArray{1} = zeros(Float64,length(Offset)) # [Offset] Pollution Conversion Factor (convert GHGs to eCO2)
   RePotential::VariableArray{1} = zeros(Float64,length(Year)) # [Year] Potential Offsets (Tonne/Yr)
   ReReductionsAB::VariableArray{1} = zeros(Float64,length(Year)) # [Year] Historical Alberta Offsets (Tonnes/Yr)
   # YrFinal  'Final Year for GHG Market or Tax (Year)'
@@ -169,15 +173,17 @@ function ElecPolicy(db)
     (; FuelEP,FuelEPs) = data
     (; Nation,Offsets) = data
     (; PCov,PCovs,Plant,Plants,Poll,Polls) = data
-    (; Units,Years) = data
+    (; Units,Year,Years) = data
     (; AreaMarket,CapTrade,CBSw,CoverNew) = data
     (; DriverBaseline,DriverRef) = data
     (; ECCMarket,ECoverage,EIBase,EIBaseline,EIBaseRawNG) = data
     (; Enforce,EuFPolRef) = data
     (; ETABY,ETADAP,ETAFAP,ETAMax,ETAMin,ETAPr,ExYear,FacSw) = data 
+    # (; GPEUSw) = data # TODO fix GPEUSw on database
     (; FBuyFr,GoalPolSw,GratSw,ISaleSw,OBA,OBAElectric) = data
     (; OBAFraction,OBANaturalGasNew,OBARawNG) = data
-    (; OffMktFr,OffNew,PBnkSw,PCost,PCovMarket,PolConv) = data
+    (; OffMktFr,OffNew,OffsetConv,PBnkSw,PCost,PCovMarket,PolConv) = data
+    (; OBAOffsets) = data
     (; PolCovRef,PollMarket,PolTotRef,RePotential) = data
     (; ReReductionsAB,UnArea,UnCoverage) = data
     (; UnEGARef,UnF1,UnFlFr,UnOffsets,UnOnLine,UnPGratis) = data
@@ -209,8 +215,8 @@ function ElecPolicy(db)
   Enforce[market] = 2018
   YrFinal = Yr(2050)
   ETABY[market] = Enforce[market]
-  Current = Int(Enforce[market] - ITime + 1)
-  Prior = Int(Current - 1)
+  Current = Int(Enforce[market])-ITime+1
+  Prior = Current-1
 
   WriteDisk(db,"SInput/Enforce",Enforce)
   WriteDisk(db,"SInput/ETABY",ETABY)
@@ -303,11 +309,17 @@ function ElecPolicy(db)
     ECoverage[ecc,poll,pcov,area,year] = 1.0
   end
 
-  pcovs = Select(PCov,["Venting","Flaring"])
+  pcovs = Select(PCov,["Venting","Process"])
   eccs = Select(ECC,["LightOilMining","HeavyOilMining","FrontierOilMining"])
-  for year in years, area in areas, pcov in pcovs, poll in polls, ecc in eccs
+  for year in years, area in areas, pcov in pcovs
     if PCovMarket[pcov,market,year] == 1
-      ECoverage[ecc,poll,pcov,area,year] = 0.0
+      for ecc in eccs
+        if ECCMarket[ecc,market,year] == 1
+          for poll in polls
+            ECoverage[ecc,poll,pcov,area,year] = 0.0
+          end
+        end
+      end
     end
   end
   WriteDisk(db,"SInput/ECoverage",ECoverage)
@@ -346,7 +358,14 @@ function ElecPolicy(db)
   #
   FacSw[market] = 1
   WriteDisk(db,"SInput/FacSw",FacSw)
-
+  
+  #
+  # Electric Utility Gratis Permits are Output Based (GPEUSw=4)
+  #
+  # TODO fix GPEUSw to be dimensioned by market on the database.
+  # GPEUSw[market]=4
+  # WriteDisk(db,"SInput/GPEUSw",GPEUSw)
+  
   #
   # Emissions goal base on Gratis Permits (GoalPolSw=1)
   #
@@ -443,7 +462,7 @@ function ElecPolicy(db)
   areas,eccs,pcovs,polls,years = 
     DefaultSets(data,AreaMarket,Current,ECCMarket,market,PCovMarket,PollMarket,YrFinal)
 
-  for year in years, area in areas, pcov in PCovs, poll in polls, ecc in eccs
+  for year in years, area in areas, pcov in pcovs, poll in polls, ecc in eccs
     EIBaseline[ecc,poll,pcov,area,year] = EIBase[ecc,poll,pcov,area]
   end
   
@@ -471,11 +490,49 @@ function ElecPolicy(db)
     OBAFraction[ecc,area,Yr(2020)] = 0.90
     OBAFraction[ecc,area,Yr(2021)] = 0.89
     OBAFraction[ecc,area,Yr(2022)] = 0.88
-    years = collect(Yr(2023):YrFinal)
+    years = collect(Yr(2023):Yr(2030))
     for year in years
     OBAFraction[ecc,area,year] = OBAFraction[ecc,area,year-1]-0.02
     end
+    years = collect(Yr(2031):Final)
+    for year in years
+    OBAFraction[ecc,area,year] = OBAFraction[ecc,area,Yr(2030)]
+    end
   end
+  
+  areas,eccs,pcovs,polls,years = 
+  DefaultSets(data,AreaMarket,Current,ECCMarket,market,PCovMarket,PollMarket,YrFinal)
+  
+  eccs = Select(ECC,["OilSandsMining","OilSandsUpgraders"])
+  for area in areas, ecc in eccs
+    OBAFraction[ecc,area,Yr(2023)] = 0.80
+  end
+  years = collect(Yr(2024):Yr(2028))
+  for year in years, area in areas, ecc in eccs
+    OBAFraction[ecc,area,year] = OBAFraction[ecc,area,year-1]-0.02
+  end
+  years = collect(Yr(2029):Yr(2030))
+  for year in years, area in areas, ecc in eccs
+    OBAFraction[ecc,area,year] = OBAFraction[ecc,area,year-1]-0.04
+  end
+  years = collect(Yr(2031):Final)
+  for year in years, area in areas, ecc in eccs
+    OBAFraction[ecc,area,year] = OBAFraction[ecc,area,Yr(2030)]
+  end
+  
+  areas,eccs,pcovs,polls,years = 
+  DefaultSets(data,AreaMarket,Current,ECCMarket,market,PCovMarket,PollMarket,YrFinal)
+  
+  eccs = Select(ECC,["PrimaryOilSands","SAGDOilSands","CSSOilSands"])
+  years = collect(Yr(2029):Yr(2030))
+  for year in years, area in areas, ecc in eccs
+    OBAFraction[ecc,area,year] = OBAFraction[ecc,area,year-1]-0.04
+  end
+  years = collect(Yr(2031):Final)
+  for year in years, area in areas, ecc in eccs
+    OBAFraction[ecc,area,year] = OBAFraction[ecc,area,Yr(2030)]
+  end
+  
   areas,eccs,pcovs,polls,years = 
     DefaultSets(data,AreaMarket,Current,ECCMarket,market,PCovMarket,PollMarket,YrFinal)
 
@@ -493,7 +550,6 @@ function ElecPolicy(db)
   areas,eccs,pcovs,polls,years = 
     DefaultSets(data,AreaMarket,Current,ECCMarket,market,PCovMarket,PollMarket,YrFinal)
 
-
   #
   # OBA of actual OBA sectors will be higher than the OBA of Raw Natural Gas
   #  - Jeff Amlin 7/31/18
@@ -503,56 +559,42 @@ function ElecPolicy(db)
     OBA[ecc,poll,pcov,area,year] = max(EIBase[ecc,poll,pcov,area]*
       OBAFraction[ecc,area,year],OBARawNG[ecc,poll,pcov,year])
   end
-  
-  #
-  # for year in years,area in areas,ecc in eccs
-  # Comment out until we can revisit the intention of this code - Jeff Amlin 6/6/24
-  # OBAFraction[ecc,area,year] = OBA[ecc,poll,pcov,area,year]/EIBase[ecc,poll,pcov,area]
-  # end
-  #
-
+  # TODO Promula the equation is OBAFraction=OBA/EIBase
+  # OBAFraction[ecc,area,year]=OBA[ecc,poll,pcov,area,year]/EIBase[ecc,poll,pcov,area]
+  # it doesn't make sense with the variables of the fraction, so I'm just guessing
+  # as to what the equation should be
+  poll = first(polls)
+  pcov = first(pcovs)
+  for year in years, area in areas, ecc in eccs
+    OBAFraction[ecc,area,year]=OBA[ecc,poll,pcov,area,year]/EIBase[ecc,poll,pcov,area]
+  end
   WriteDisk(db,"SInput/OBAFraction",OBAFraction)
-
+  
   #
   # OBA Fraction for Electric Utility Generation
+  # TODO Promula: Jeff had commented this out until we figured out the code intention
   #
-  
   UtilityGen = Select(ECC,"UtilityGen")
-  for year in years, area in areas, pcov in pcovs, poll in polls
-    OBA[UtilityGen,poll,pcov,area,year] = 0.0
-  end
-
-  CO2 = Select(Poll,"CO2")
-  Energy = Select(PCov,"Energy")
-
-  for year in years, fuelep in FuelEPs, plant in Plants
-    OBAElectric[plant,fuelep,year] = 370.0
-  end
-
+  OBA[UtilityGen,polls,pcovs,areas,years] .= 0.0
+  polls = Select(Poll,"CO2")
+  pcovs = Select(PCov,"Energy")
+  OBAElectric[Plants,FuelEPs,years] .= 370.0
   years = collect(Yr(2030):YrFinal)
-  for year in years, fuelep in FuelEPs, plant in Plants
-    OBAElectric[plant,fuelep,year] = 311.0
-  end
-  areas,eccs,pcovs,polls,years = DefaultSets(data,AreaMarket,Current,
-    ECCMarket,market,PCovMarket,PollMarket,YrFinal)
-
+  OBAElectric[Plants,FuelEPs,years] .= 311.0
   years = collect(Yr(2023):Yr(2029))
   for year in years, fuelep in FuelEPs, plant in Plants
     OBAElectric[plant,fuelep,year] = OBAElectric[plant,fuelep,year-1]+
-    (OBAElectric[plant,fuelep,Yr(2030)]-OBAElectric[plant,fuelep,Yr(2022)])/(2030-2022)
+      (OBAElectric[plant,fuelep,Yr(2030)]-OBAElectric[plant,fuelep,Yr(2022)])/(2030-2022)
   end
-  areas,eccs,pcovs,polls,years = 
-    DefaultSets(data,AreaMarket,Current,ECCMarket,market,PCovMarket,PollMarket,YrFinal)
-
+  years = Select(Year)
   fueleps = Select(FuelEP,["Biomass","RNG","Waste"])
-  for year in years,fuelep in fueleps,plant in Plants
-    OBAElectric[plant,fuelep,year] = 0.0
-  end
-
+  OBAElectric[Plants,fueleps,years] .= 0.0
+  fueleps = Select(FuelEP)
+  
   #
   # New Natural Gas Units
   #
-  # plants = Select(Plant,["OGCT","OGCC","SmallOGCC","NGCCS"])
+  plants = Select(Plant,["OGCT","OGCC","SmallOGCC","NGCCS"])
   for year in years
     OBANaturalGasNew[year] = 370.0
   end
@@ -564,6 +606,19 @@ function ElecPolicy(db)
   for year in years
     OBANaturalGasNew[year] = OBANaturalGasNew[year-1]+
       (OBANaturalGasNew[Yr(2030)]-OBANaturalGasNew[Yr(2022)])/(2030-2022)
+  end
+  years = Select(Year)
+  #
+  # Offsets for existing units
+  #
+  plants = Select(Plant,["OnshoreWind","SolarPV","SolarThermal"])
+  OBAOffsets[plants,years] .= 370.0
+  years = collect(Yr(2030):YrFinal)
+  OBAOffsets[plants,years] .= 311.0
+  years = collect(Yr(2023):Yr(2029))
+  for year in years, plant in plants
+    OBAOffsets[plant,year] = OBAOffsets[plant,year-1]+
+      (OBAOffsets[plant,Yr(2030)]-OBAOffsets[plant,Yr(2022)])/(2030-2022)
   end
   areas,eccs,pcovs,polls,years = 
     DefaultSets(data,AreaMarket,Current,ECCMarket,market,PCovMarket,PollMarket,YrFinal)
@@ -616,6 +671,14 @@ function ElecPolicy(db)
                   xUnGP[unit,fuelep,CO2,year] = OBANaturalGasNew[year]
                 end
               end
+            end
+            
+            #
+            # Units which do not burn fuel are granted offsets
+            #
+            if (UnPlant[unit] == "OnshoreWind") || (UnPlant[unit] == "SolarPV") ||
+                (UnPlant[unit] == "SolarThermal")
+              UnOffsets[unit,CO2,year] = OBAOffsets[plant,year]
             end
           end
         end
@@ -877,6 +940,7 @@ function ElecPolicy(db)
     SqPGMult[ecc,CO2,AB,year] = 1.0
   end
   WriteDisk(db,"SInput/SqPGMult",SqPGMult)
+  
   areas,eccs,pcovs,polls,years = 
     DefaultSets(data,AreaMarket,Current,ECCMarket,market,PCovMarket,PollMarket,YrFinal)
 
@@ -889,20 +953,18 @@ function ElecPolicy(db)
   for year in years, offset in Offsets
     ReC0[offset,AB,year] = ReC0[offset,AB,Yr(2007)]
   end
-  areas,eccs,pcovs,polls,years = 
-    DefaultSets(data,AreaMarket,Current,ECCMarket,market,PCovMarket,PollMarket,YrFinal)
-
+  years = collect(Year)
   #
   # Convert reductions to eCO2
   #
-  for offset in Offsets, poll in polls, year in Years
-    if Poll[poll] == RePollutant[offset]
-      ReC0[offset,AB,year] = ReC0[offset,AB,year]*PolConv[poll]
-    else
-      ReC0[offset,AB,year] = 0.0
+  for offset in Offsets
+    OffsetConv[offset] = 0.0
+    for poll in polls
+      if Poll[poll] == RePollutant[offset]
+        OffsetConv[offset] = PolConv[poll]
+      end
     end
   end
-  WriteDisk(db,"MEInput/ReC0",ReC0)
   
   #
   # Offset Potential
@@ -918,19 +980,15 @@ function ElecPolicy(db)
   for year in years
     ReReductionsAB[year] = 2.50*1e6
   end
-  areas,eccs,pcovs,polls,years = 
-    DefaultSets(data,AreaMarket,Current,ECCMarket,market,PCovMarket,PollMarket,YrFinal)
 
   #
   # Scale to all types of Offsets
   #
   years = collect(Yr(2003):Yr(2013))
   for year in years, offset in Offsets
-    @finite_math ReReductionsX[offset,AB,year] = ReC0[offset,AB,year]/RePotential[year]*
-      ReReductionsAB[year]
+    @finite_math ReReductionsX[offset,AB,year] =
+      ReC0[offset,AB,year]/RePotential[year]*ReReductionsAB[year]
   end
-  areas,eccs,pcovs,polls,years = 
-    DefaultSets(data,AreaMarket,Current,ECCMarket,market,PCovMarket,PollMarket,YrFinal)
   
   #
   # Convert reductions from eCO2
@@ -943,22 +1001,20 @@ function ElecPolicy(db)
       ReReductionsX[offset,AB,year] = 0.0
     end
   end
-  areas,eccs,pcovs,polls,years = 
-    DefaultSets(data,AreaMarket,Current,ECCMarket,market,PCovMarket,PollMarket,YrFinal)
 
   years = collect(Yr(2014):YrFinal)
   for year in years, offset in Offsets
     ReReductionsX[offset,AB,year] = 
       max(ReReductionsX[offset,AB,Yr(2013)],ReReductionsX[offset,AB,year])
   end
-  WriteDisk(db,"MEInput/ReReductionsX",ReReductionsX)
   areas,eccs,pcovs,polls,years = 
-    DefaultSets(data,AreaMarket,Current,ECCMarket,market,PCovMarket,PollMarket,YrFinal)
+  DefaultSets(data,AreaMarket,Current,ECCMarket,market,PCovMarket,PollMarket,YrFinal)
   
+  WriteDisk(db,"MEInput/ReReductionsX",ReReductionsX)
 end
 
 function PolicyControl(db)
-  @info "CarbonTax_OBA_AB.jl - PolicyControl"
+  @info "Policies/CarbonTax_OBA_AB.jl - PolicyControl"
   ElecPolicy(db)
 end
 
