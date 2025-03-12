@@ -1,6 +1,9 @@
 *
 !*.gitignore
 
+# Calibration
+!Calibration/
+
 # Policies
 !Policies/
 !Policies/Adjust_TR_Calib_Passenger.jl
