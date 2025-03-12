@@ -193,7 +193,7 @@ function ElecPolicy(db)
   YrFinal = Yr(2050)
   ETABY[market] = Enforce[market]
   Current = Int(Enforce[market] - ITime + 1)
-  Prior = Int(Current - 1)
+  Prior = Current-1
 
   WriteDisk(db,"SInput/Enforce",Enforce)
   WriteDisk(db,"SInput/ETABY",ETABY)
@@ -204,12 +204,12 @@ function ElecPolicy(db)
   #
   # Areas Covered
   #
-  for year in years, area in Areas
+  for year in years,area in Areas
     AreaMarket[area,market,year] = 0
   end
 
   areas = Select(Area,"NB")
-  for year in years, area in areas
+  for year in years,area in areas
     AreaMarket[area,market,year] = 1
   end
   WriteDisk(db,"SInput/AreaMarket",AreaMarket)
@@ -294,9 +294,15 @@ function ElecPolicy(db)
                       "ConventionalGasProduction","SweetGasProcessing",
                       "UnconventionalGasProduction","SourGasProcessing",
                       "LNGProduction"])
-  for year in years, area in areas, pcov in pcovs, poll in polls, ecc in eccs
+  for year in years, area in areas, pcov in pcovs
     if PCovMarket[pcov,market,year] == 1
+      for ecc in eccs
+        if ECCMarket[ecc,market,year] == 1
+          for poll in polls
       ECoverage[ecc,poll,pcov,area,year] = 0.0
+          end
+        end
+      end
     end
   end
   WriteDisk(db,"SInput/ECoverage",ECoverage)
@@ -335,6 +341,13 @@ function ElecPolicy(db)
   #
   FacSw[market] = 1
   WriteDisk(db,"SInput/FacSw",FacSw)
+  
+  #
+  # Electric Utility Gratis Permits are Output Based (GPEUSw=4)
+  #
+  # TODO fix GPEUSw to be dimensioned by market on the database.
+  # GPEUSw[market]=4
+  # WriteDisk(db,"SInput/GPEUSw",GPEUSw)
 
   #
   # Emissions goal base on Gratis Permits (GoalPolSw=1)
@@ -355,6 +368,10 @@ function ElecPolicy(db)
     PBnkSw[market,year] = 1
   end
   WriteDisk(db,"SInput/PBnkSw",PBnkSw)
+
+    
+  areas,eccs,pcovs,polls,years = 
+    DefaultSets(data,AreaMarket,Current,ECCMarket,market,PCovMarket,PollMarket,YrFinal)
 
   #########################
   #
@@ -428,7 +445,7 @@ function ElecPolicy(db)
   areas,eccs,pcovs,polls,years = 
     DefaultSets(data,AreaMarket,Current,ECCMarket,market,PCovMarket,PollMarket,YrFinal)
 
-  for year in years, area in areas, pcov in PCovs, poll in polls, ecc in eccs
+  for year in years, area in areas, pcov in pcovs, poll in polls, ecc in eccs
     EIBaseline[ecc,poll,pcov,area,year] = EIBase[ecc,poll,pcov,area]
   end
 
@@ -578,25 +595,27 @@ function ElecPolicy(db)
       for year in years, unit in units
         if UnCoverage[unit,CO2,year] == 1
           plant,area,ecc = GetUnitSets(data,unit)
-          
-          #
-          # Fossil Units get emissions credits
-          #
-          if (UnPlant[unit] == "OGCT") || (UnPlant[unit] == "SmallOGCC") ||
-              (UnPlant[unit] == "OGCC") || (UnPlant[unit] == "OGSteam")   ||
-              (UnPlant[unit] == "Coal") || (UnPlant[unit] == "CoalCCS")   ||
-              (UnPlant[unit] == "NGCCS") 
-            if UnCogen[unit] == 0
-              for fuelep in FuelEPs
-                xUnGP[unit,fuelep,CO2,year] = OBAElectric[plant,fuelep,year]
-              end
-              if UnOnLine[unit] > 2020
-                NaturalGas = Select(FuelEP,"NaturalGas")
-                xUnGP[unit,NaturalGas,CO2,year] = OBAElectric[plant,NaturalGas,year]
-              end
-            else
-              for fuelep in FuelEPs
-                xUnGP[unit,fuelep,CO2,year] = OBAElectric[plant,fuelep,year]
+          if ECCMarket[ecc,market,year] == 1
+            
+            #
+            # Fossil Units get emissions credits
+            #
+            if (UnPlant[unit] == "OGCT") || (UnPlant[unit] == "SmallOGCC") ||
+                (UnPlant[unit] == "OGCC") || (UnPlant[unit] == "OGSteam")   ||
+                (UnPlant[unit] == "Coal") || (UnPlant[unit] == "CoalCCS")   ||
+                (UnPlant[unit] == "NGCCS") 
+              if UnCogen[unit] == 0
+                for fuelep in FuelEPs
+                  xUnGP[unit,fuelep,CO2,year] = OBAElectric[plant,fuelep,year]
+                end
+                if UnOnLine[unit] > 2020
+                  NaturalGas = Select(FuelEP,"NaturalGas")
+                  xUnGP[unit,NaturalGas,CO2,year] = OBAElectric[plant,NaturalGas,year]
+                end
+              else
+                for fuelep in FuelEPs
+                  xUnGP[unit,fuelep,CO2,year] = OBAElectric[plant,fuelep,year]
+                end
               end
             end
           end
@@ -655,7 +674,7 @@ function ElecPolicy(db)
   #
   # New Units
   #
-  #
+
   # Select Poll(CO2)
   #
   #
@@ -821,6 +840,7 @@ function ElecPolicy(db)
   # Exogenous market price (xETAPr) is set equal to the
   # unlimited backstop price (ETADAP)
   #
+  
   for year in Years
     xETAPr[market,year] = ETADAP[market,year]
     ETAPr[market,year] = xETAPr[market,year]*xInflationNation[US,year]
