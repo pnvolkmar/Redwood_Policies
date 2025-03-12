@@ -123,7 +123,7 @@ function ResPolicy(db)
     end
     
   end
-  
+  CMSM0[abs.(CMSM0) .< 1e-8] .= 0
   WriteDisk(db,"$CalDB/CMSM0",CMSM0);
 
   #

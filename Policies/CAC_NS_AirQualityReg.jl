@@ -120,14 +120,15 @@ function CAC_NS_AirQualityRegDataPolicy(db)
   #                   2013     2014     2015     2016     2017     2018     2019     2020     2021     2022     2023     2024     2025     2026     2027     2028     2029     2030     2031     2032     2033     2034     2035     2036     2037     2038     2039     2040     2041     2042     2043     2044     2045     2046     2047     2048     2049     2050  
   tmp[read_years] = [72500,   72500,   60900,   60900,   60900,   60900,   60900,   36250,   36250,   36250,   36250,   36250,   36250,   36250,   36250,   36250,   36250,   36250,   36250,   36250,   36250,   36250,   36250,   36250,   36250,   36250,   36250,   36250,   36250,   36250,   36250,   36250,   36250,   36250,   36250,   36250,   36250,   36250]
   write_years = collect(Future:Final)
-  xGoalPol[16,write_years] = tmp[write_years]
+  incorrect_years = collect(Yr(2017):(Yr(2017)+length(write_years)-1)) # TODO Promula get the correct years written 
+  xGoalPol[16,write_years] = tmp[incorrect_years]
 
   #             Market   ECC                Area   Poll                  
   CapData(data, 96,     "UtilityGen",      "NS",  "NOX")
   tmp .= 0
   #                   2013     2014     2015     2016     2017     2018     2019     2020     2021     2022     2023     2024     2025     2026     2027     2028     2029     2030     2031     2032     2033     2034     2035     2036     2037     2038     2039     2040     2041     2042     2043     2044     2045     2046     2047     2048     2049     2050  
   tmp[read_years] = [21365,   21365,   19228,   19228,   19228,   19228,   19228,   14955,   14955,   14955,   14955,   14955,   14955,   14955,   14955,   14955,   14955,   14955,   14955,   14955,   14955,   14955,   14955,   14955,   14955,   14955,   14955,   14955,   14955,   14955,   14955,   14955,   14955,   14955,   14955,   14955,   14955,   14955]
-  xGoalPol[96,write_years] = tmp[write_years]
+  xGoalPol[96,write_years] = tmp[incorrect_years] # TODO Promula get the correct years written
 
   # Removing Caps for Hg since CAC_ElecGen_NS.txp is setting caps on Hg. Audrey 22/11/04
   # 
@@ -140,7 +141,7 @@ function CAC_NS_AirQualityRegDataPolicy(db)
   WriteDisk(db,"SInput/CapTrade",CapTrade)
   WriteDisk(db,"SInput/ECCMarket",ECCMarket)
   WriteDisk(db,"SInput/ECoverage",ECoverage)
-  WriteDisk(db,"SInput/PCovMarket",PCovMarket)
+  # WriteDisk(db,"SInput/PCovMarket",PCovMarket) # TODO Promula: This never gets written in Promula
   WriteDisk(db,"SInput/PollMarket",PollMarket)
   WriteDisk(db,"SInput/xGoalPol",xGoalPol)
   
