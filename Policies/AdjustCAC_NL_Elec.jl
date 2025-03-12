@@ -1,11 +1,11 @@
 #
-# AdjustCAC_NB_Elec.jl
+# AdjustCAC_NL_Elec.jl
 # 
 
 
 using SmallModel
 
-module AdjustCAC_NB_Elec
+module AdjustCAC_NL_Elec
 
 import ...SmallModel: ReadDisk,WriteDisk,Select,HisTime,ITime,MaxTime,First,Future,DB,Final
 import ...SmallModel: @finite_math,finite_inverse,finite_divide,finite_power,finite_exp,finite_log
@@ -196,7 +196,7 @@ function ElecPolicy(db)
 end
 
 function PolicyControl(db)
-  @info "AdjustCAC_NB_Elec.jl - PolicyControl"
+  @info "AdjustCAC_NL_Elec.jl - PolicyControl"
   ElecPolicy(db)
 end
 
