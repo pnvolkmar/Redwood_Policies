@@ -195,7 +195,7 @@ function ElecPolicy(db)
   Enforce[market] = 2019
   YrFinal = Yr(2050)
   ETABY[market] = Enforce[market]
-  Current = Int(Enforce[market] - ITime + 1)
+  Current = Int(Enforce[market])-ITime+1
   Prior = Current-1
 
   WriteDisk(db,"SInput/Enforce",Enforce)
@@ -371,10 +371,6 @@ function ElecPolicy(db)
     PBnkSw[market,year] = 1
   end
   WriteDisk(db,"SInput/PBnkSw",PBnkSw)
-
-    
-  areas,eccs,pcovs,polls,years = 
-    DefaultSets(data,AreaMarket,Current,ECCMarket,market,PCovMarket,PollMarket,YrFinal)
 
   #########################
   #
@@ -556,8 +552,6 @@ function ElecPolicy(db)
   #
   # Gratis Permits and Offsets for Electric Generation
   #
-  print("\nUnit 585's xUnGP: ")
-  print(xUnGP[Select(Unit,"Unit(585)"),Select(FuelEP,"Ammonia"),Select(Poll,"CO2"),Yr(2019)])
   for area in areas
     units = findall(UnArea[:] .== Area[area])
     if !isempty(units)
@@ -580,18 +574,8 @@ function ElecPolicy(db)
       # For each Covered Electric Generating Unit
       #
       for year in years, unit in units
-        # if unit == 585 && year == Yr(2019)
-        #   print("\nUnit 585's xUnGP: ")
-        #   print(xUnGP[Select(Unit,"Unit(585)"),Select(FuelEP,"Ammonia"),Select(Poll,"CO2"),Yr(2019)])
-        #   print("\nUnCoverage: ")
-        #   print(UnCoverage[unit,CO2,year])
-        # end
         if UnCoverage[unit,CO2,year] == 1
           plant,area,ecc = GetUnitSets(data,unit)
-          # if unit == 585 && year == Yr(2019)
-          #   print("\\nECCMarket: ")
-          #   print(ECCMarket[ecc,market,year])
-          # end
           
           #
           # Fossil Units get emissions credits
@@ -618,8 +602,6 @@ function ElecPolicy(db)
       end
     end
   end
-  print("\nUnit 585's xUnGP: ")
-  print(xUnGP[Select(Unit,"Unit(585)"),Select(FuelEP,"Ammonia"),Select(Poll,"CO2"),Yr(2019)])
 
   WriteDisk(db,"EGInput/xUnGP",xUnGP)
 
@@ -858,7 +840,7 @@ function ElecPolicy(db)
 end
 
 function PolicyControl(db)
-  @info "CarbonTax_OBA_NB.jl - PolicyControl"
+  @info "Policies/CarbonTax_OBA_NB.jl - PolicyControl"
   ElecPolicy(db)
 end
 
