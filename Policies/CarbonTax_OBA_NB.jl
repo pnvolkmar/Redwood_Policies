@@ -69,6 +69,8 @@ Base.@kwdef struct EControl
   FacSw::VariableArray{1} = ReadDisk(db,"SInput/FacSw") # [Market] Facility Level Intensity Target Switch (1=Facility Target)
   FBuyFr::VariableArray{2} = ReadDisk(db,"SInput/FBuyFr") # [Market,Year] Federal (Domestic) Permits Fraction Bought (Tonnes/Tonnes)
   GoalPolSw::VariableArray{1} = ReadDisk(db,"SInput/GoalPolSw") # [Market] Pollution Goal Switch (1=Gratis Permits,0=Exogenous)
+  # TODO fix GPEUSw to be dimensioned by market on the database. 
+  GPEUSw::VariableArray{1} = ReadDisk(db,"SInput/GPEUSw") # [Market] Gratis Permit Allocation Switch (1=Grandfather, 2=Output, 0=Exogenous)
   GratSw::VariableArray{1} = ReadDisk(db,"SInput/GratSw") # [Market] Gratis Permit Allocation Switch (1=Grandfather,2=Output,0=Exogenous)
   ISaleSw::VariableArray{2} = ReadDisk(db,"SInput/ISaleSw") # [Market,Year] Switch for Unlimited Sales (1=International Permits,2=Domestic Permits)
   OBAFraction::VariableArray{3} = ReadDisk(db,"SInput/OBAFraction") # [ECC,Area,Year] Output-Based Allocation Fraction (Tonne/Tonne)
@@ -154,11 +156,12 @@ function ElecPolicy(db)
   data = EControl(; db)
   (; Area,Areas,ECC,ECCs,FuelEP,FuelEPs) = data 
   (; Nation,PCov,PCovs) = data
-  (; Plant,Plants,Poll,Polls,Units) = data
+  (; Plant,Plants,Poll,Polls,Unit,Units) = data
   (; Years) = data
   (; AreaMarket,CapTrade,CBSw,CoverNew,DriverBaseline,DriverRef) = data
   (; ECCMarket,ECoverage,EIBaseline,Enforce) = data
   (; ETABY,ETADAP,ETAFAP,ETAMax,ETAMin,ETAPr,ExYear,FacSw) = data
+  (; GPEUSw) = data
   (; FBuyFr,GoalPolSw,GratSw,ISaleSw,OBAFraction) = data
   (; PBnkSw,PCost,PCovMarket) = data
   (; PolConv,PolCovRef,PollMarket,PolTotRef) = data
@@ -286,7 +289,7 @@ function ElecPolicy(db)
     ECoverage[ecc,poll,pcov,area,year] = 1.0
   end
 
-  pcovs = Select(PCov,["Venting","Flaring"])
+  pcovs = Select(PCov,["Venting","Process"])
   eccs = Select(ECC,["NGPipeline",
                       "LightOilMining","HeavyOilMining","FrontierOilMining",
                       "PrimaryOilSands","SAGDOilSands","CSSOilSands",
@@ -299,7 +302,7 @@ function ElecPolicy(db)
       for ecc in eccs
         if ECCMarket[ecc,market,year] == 1
           for poll in polls
-      ECoverage[ecc,poll,pcov,area,year] = 0.0
+            ECoverage[ecc,poll,pcov,area,year] = 0.0
           end
         end
       end
@@ -346,8 +349,8 @@ function ElecPolicy(db)
   # Electric Utility Gratis Permits are Output Based (GPEUSw=4)
   #
   # TODO fix GPEUSw to be dimensioned by market on the database.
-  # GPEUSw[market]=4
-  # WriteDisk(db,"SInput/GPEUSw",GPEUSw)
+  GPEUSw[market]=4
+  WriteDisk(db,"SInput/GPEUSw",GPEUSw)
 
   #
   # Emissions goal base on Gratis Permits (GoalPolSw=1)
@@ -427,7 +430,7 @@ function ElecPolicy(db)
   #
   # Emissions Intensity from Baseline
   #
-  years = collect(Yr(2015):Yr(2017))
+  years = collect(Yr(2018):Yr(2020))
   for area in areas, pcov in PCovs, poll in polls, ecc in eccs
     @finite_math EIBase[ecc,poll,pcov,area] = sum(PolTotRef[ecc,poll,pcov,area,year]*
       PolConv[poll]*ECoverage[ecc,poll,pcov,area,YrFinal] for year in years)/
@@ -461,7 +464,7 @@ function ElecPolicy(db)
   
   years = collect(Yr(2023):Yr(2030))
   for year in years, area in areas, ecc in eccs
-    OBAFraction[ecc,area,year] = OBAFraction[ecc,area,year-1]-0.02
+    OBAFraction[ecc,area,year] = OBAFraction[ecc,area,year-1]-0.01
   end
   
   years = collect(Yr(2030):YrFinal)
@@ -493,31 +496,18 @@ function ElecPolicy(db)
   CO2 = Select(Poll,"CO2")
   Energy = Select(PCov,"Energy")
   years = collect(Current:YrFinal)
-
+  
   plants = Select(Plant,["OGCT","OGCC","SmallOGCC","NGCCS","OGSteam"])
-  for year in years, fuelep in FuelEPs, plant in plants
-    OBAElectric[plant,fuelep,year] = 795.0
+  for fuelep in FuelEPs, plant in plants
+    OBAElectric[plant,fuelep,Yr(2019)] = 800.0
+    OBAElectric[plant,fuelep,Yr(2020)] = 795.0
+    OBAElectric[plant,fuelep,Yr(2021)] = 790.0
+    OBAElectric[plant,fuelep,Yr(2022):Final] .= 785.0
   end
-  
-  years = collect(Yr(2023):YrFinal)
-  for year in years, fuelep in FuelEPs, plant in plants
-    OBAElectric[plant,fuelep,year] = 668.0
-  end
-  
-  fueleps = Select(FuelEP,"NaturalGas")
-  for fuelep in fueleps, plant in plants
-    OBAElectric[plant,fuelep,Yr(2022)] = 420.0
-    OBAElectric[plant,fuelep,Yr(2023)] = 395.0
-    OBAElectric[plant,fuelep,Yr(2024)] = 395.0
-    OBAElectric[plant,fuelep,Yr(2025)] = 395.0
-    OBAElectric[plant,fuelep,Yr(2026)] = 390.0
-    OBAElectric[plant,fuelep,Yr(2027)] = 370.0
-    OBAElectric[plant,fuelep,Yr(2028)] = 370.0
-    OBAElectric[plant,fuelep,Yr(2029)] = 370.0
-    years = collect(Yr(2030):YrFinal)
-    for year in years
-      OBAElectric[plant,fuelep,year] = 240.0
-    end
+  NG = Select(FuelEP,"NaturalGas")
+  years = collect(Yr(2019):YrFinal)
+  for year in years, plant in plants
+    OBAElectric[plant,NG,year] = 420.0
   end
 
   fueleps = Select(FuelEP,["Biomass","RNG","Waste"])
@@ -550,17 +540,12 @@ function ElecPolicy(db)
   #
   plants = Select(Plant,["Coal","CoalCCS"])
   for fuelep in FuelEPs, plant in plants
-    OBAElectric[plant,fuelep,Yr(2022)] = 811.0
-    OBAElectric[plant,fuelep,Yr(2023)] = 780.0
-    OBAElectric[plant,fuelep,Yr(2024)] = 765.0
-    OBAElectric[plant,fuelep,Yr(2025)] = 725.0
-    OBAElectric[plant,fuelep,Yr(2026)] = 725.0
-    OBAElectric[plant,fuelep,Yr(2027)] = 710.0
-    OBAElectric[plant,fuelep,Yr(2028)] = 705.0
-    OBAElectric[plant,fuelep,Yr(2029)] = 705.0
-    years = collect(Yr(2030):YrFinal)
+    OBAElectric[plant,fuelep,Yr(2019)] = 820.0
+    OBAElectric[plant,fuelep,Yr(2020)] = 811.0
+    OBAElectric[plant,fuelep,Yr(2021)] = 802.0
+    years = collect(Yr(2022):YrFinal)
     for year in years
-      OBAElectric[plant,fuelep,year] = 1.0
+      OBAElectric[plant,fuelep,year] = 793
     end
   end
   
@@ -571,6 +556,8 @@ function ElecPolicy(db)
   #
   # Gratis Permits and Offsets for Electric Generation
   #
+  print("\nUnit 585's xUnGP: ")
+  print(xUnGP[Select(Unit,"Unit(585)"),Select(FuelEP,"Ammonia"),Select(Poll,"CO2"),Yr(2019)])
   for area in areas
     units = findall(UnArea[:] .== Area[area])
     if !isempty(units)
@@ -593,29 +580,37 @@ function ElecPolicy(db)
       # For each Covered Electric Generating Unit
       #
       for year in years, unit in units
+        # if unit == 585 && year == Yr(2019)
+        #   print("\nUnit 585's xUnGP: ")
+        #   print(xUnGP[Select(Unit,"Unit(585)"),Select(FuelEP,"Ammonia"),Select(Poll,"CO2"),Yr(2019)])
+        #   print("\nUnCoverage: ")
+        #   print(UnCoverage[unit,CO2,year])
+        # end
         if UnCoverage[unit,CO2,year] == 1
           plant,area,ecc = GetUnitSets(data,unit)
-          if ECCMarket[ecc,market,year] == 1
-            
-            #
-            # Fossil Units get emissions credits
-            #
-            if (UnPlant[unit] == "OGCT") || (UnPlant[unit] == "SmallOGCC") ||
-                (UnPlant[unit] == "OGCC") || (UnPlant[unit] == "OGSteam")   ||
-                (UnPlant[unit] == "Coal") || (UnPlant[unit] == "CoalCCS")   ||
-                (UnPlant[unit] == "NGCCS") 
-              if UnCogen[unit] == 0
-                for fuelep in FuelEPs
-                  xUnGP[unit,fuelep,CO2,year] = OBAElectric[plant,fuelep,year]
-                end
-                if UnOnLine[unit] > 2020
-                  NaturalGas = Select(FuelEP,"NaturalGas")
-                  xUnGP[unit,NaturalGas,CO2,year] = OBAElectric[plant,NaturalGas,year]
-                end
-              else
-                for fuelep in FuelEPs
-                  xUnGP[unit,fuelep,CO2,year] = OBAElectric[plant,fuelep,year]
-                end
+          # if unit == 585 && year == Yr(2019)
+          #   print("\\nECCMarket: ")
+          #   print(ECCMarket[ecc,market,year])
+          # end
+          
+          #
+          # Fossil Units get emissions credits
+          #
+          if (UnPlant[unit] == "OGCT") || (UnPlant[unit] == "SmallOGCC") ||
+              (UnPlant[unit] == "OGCC") || (UnPlant[unit] == "OGSteam")   ||
+              (UnPlant[unit] == "Coal") || (UnPlant[unit] == "CoalCCS")   ||
+              (UnPlant[unit] == "NGCCS") 
+            if UnCogen[unit] == 0
+              for fuelep in FuelEPs
+                xUnGP[unit,fuelep,CO2,year] = OBAElectric[plant,fuelep,year]
+              end
+              if UnOnLine[unit] > 2020
+                NaturalGas = Select(FuelEP,"NaturalGas")
+                xUnGP[unit,NaturalGas,CO2,year] = OBAElectric[plant,NaturalGas,year]
+              end
+            else
+              for fuelep in FuelEPs
+                xUnGP[unit,fuelep,CO2,year] = OBAElectric[plant,fuelep,year]
               end
             end
           end
@@ -623,6 +618,8 @@ function ElecPolicy(db)
       end
     end
   end
+  print("\nUnit 585's xUnGP: ")
+  print(xUnGP[Select(Unit,"Unit(585)"),Select(FuelEP,"Ammonia"),Select(Poll,"CO2"),Yr(2019)])
 
   WriteDisk(db,"EGInput/xUnGP",xUnGP)
 
