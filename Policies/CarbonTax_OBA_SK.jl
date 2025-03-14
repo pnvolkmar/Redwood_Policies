@@ -1,5 +1,5 @@
 #
-# CarbonTax_OBA_SK.jl - Federal Carbon Tax with OBA for SK
+# Policies/CarbonTax_OBA_SK.jl - Federal Carbon Tax with OBA for SK
 #
 
 using SmallModel
@@ -69,6 +69,8 @@ Base.@kwdef struct EControl
   FacSw::VariableArray{1} = ReadDisk(db,"SInput/FacSw") # [Market] Facility Level Intensity Target Switch (1=Facility Target)
   FBuyFr::VariableArray{2} = ReadDisk(db,"SInput/FBuyFr") # [Market,Year] Federal (Domestic) Permits Fraction Bought (Tonnes/Tonnes)
   GoalPolSw::VariableArray{1} = ReadDisk(db,"SInput/GoalPolSw") # [Market] Pollution Goal Switch (1=Gratis Permits,0=Exogenous)
+  # TODO fix GPEUSw to be dimensioned by market on the database. 
+  GPEUSw::VariableArray{1} = ReadDisk(db,"SInput/GPEUSw") # [Market] Gratis Permit Allocation Switch (1=Grandfather, 2=Output, 0=Exogenous)
   GratSw::VariableArray{1} = ReadDisk(db,"SInput/GratSw") # [Market] Gratis Permit Allocation Switch (1=Grandfather,2=Output,0=Exogenous)
   ISaleSw::VariableArray{2} = ReadDisk(db,"SInput/ISaleSw") # [Market,Year] Switch for Unlimited Sales (1=International Permits,2=Domestic Permits)
   OBAFraction::VariableArray{3} = ReadDisk(db,"SInput/OBAFraction") # [ECC,Area,Year] Output-Based Allocation Fraction (Tonne/Tonne)
@@ -154,20 +156,23 @@ function ElecPolicy(db)
   data = EControl(; db)
   (; Area,Areas,ECC,ECCs,FuelEP,FuelEPs) = data 
   (; Nation,PCov,PCovs) = data
-  (; Plant,Plants,Poll,Polls,Units) = data
+  (; Plant,Plants,Poll,Polls,Unit,Units) = data
   (; Years) = data
   (; AreaMarket,CapTrade,CBSw,CoverNew,DriverBaseline,DriverRef) = data
-  (; ECCMarket,ECoverage,EIBase,EIBaseline,Enforce) = data
-  (; ETABY,ETADAP,ETAFAP,ETAMax,ETAMin,ETAPr,ExYear) = data
-  (; FacSw,FBuyFr,GoalPolSw,GratSw,ISaleSw,OBAFraction) = data
-  (; OBA,OBACogen,OBAElectric,OBANaturalGasNew) = data
-  (; PBnkSw,PCost,PCovMarket,PolConv,PolCovRef,PollMarket) = data
-  (; PolTotRef,UnArea,UnCogen,UnCoverage,UnEGARef) = data
-  (; UnF1,UnFlFr,UnOnLine,UnPGratis) = data
-  (; UnPlant,UnPolRef,UnSector,xETAPr) = data
-  (; xExchangeRate,xExchangeRateNation,xFSell,xGoalPol,xGPNew) = data
+  (; ECCMarket,ECoverage,EIBaseline,Enforce) = data
+  (; ETABY,ETADAP,ETAFAP,ETAMax,ETAMin,ETAPr,ExYear,FacSw) = data
+  (; GPEUSw) = data
+  (; FBuyFr,GoalPolSw,GratSw,ISaleSw,OBAFraction) = data
+  (; OBACogen,OBANaturalGasNew) = data
+  (; PBnkSw,PCost,PCovMarket) = data
+  (; PolConv,PolCovRef,PollMarket,PolTotRef) = data
+  (; UnArea,UnCogen,UnCoverage,UnEGARef) = data
+  (; UnF1,UnFlFr,UnOnLine) = data
+  (; UnPGratis,UnPlant,UnPolRef,UnSector,xETAPr) = data
+  (; xExchangeRate,xExchangeRateNation,xFSell,xGoalPol,) = data
   (; xInflationNation,xISell,xPGratis,xPolCap) = data
-  (; xUnGP) = data
+  (; xUnGP,xGPNew) = data
+  (; EIBase,OBA,OBAElectric) = data
 
   #########################
   #
@@ -191,8 +196,8 @@ function ElecPolicy(db)
   Enforce[market] = 2019
   YrFinal = Yr(2050)
   ETABY[market] = Enforce[market]
-  Current = Int(Enforce[market] - ITime + 1)
-  Prior = Int(Current - 1)
+  Current = Int(Enforce[market])-ITime+1
+  Prior = Current-1
 
   WriteDisk(db,"SInput/Enforce",Enforce)
   WriteDisk(db,"SInput/ETABY",ETABY)
@@ -203,12 +208,12 @@ function ElecPolicy(db)
   #
   # Areas Covered
   #
-  for year in years, area in Areas
+  for year in years,area in Areas
     AreaMarket[area,market,year] = 0
   end
 
   areas = Select(Area,"SK")
-  for year in years, area in areas
+  for year in years,area in areas
     AreaMarket[area,market,year] = 1
   end
   WriteDisk(db,"SInput/AreaMarket",AreaMarket)
@@ -285,16 +290,22 @@ function ElecPolicy(db)
     ECoverage[ecc,poll,pcov,area,year] = 1.0
   end
 
-  pcovs = Select(PCov,["Venting","Flaring"])
+  pcovs = Select(PCov,["Venting","Process"])
   eccs = Select(ECC,["LightOilMining","HeavyOilMining","FrontierOilMining",
                       "PrimaryOilSands","SAGDOilSands","CSSOilSands",
                       "OilSandsUpgraders",
                       "ConventionalGasProduction","SweetGasProcessing",
                       "UnconventionalGasProduction","SourGasProcessing",
                       "LNGProduction"])
-  for year in years, area in areas, pcov in pcovs, poll in polls, ecc in eccs
+  for year in years, area in areas, pcov in pcovs
     if PCovMarket[pcov,market,year] == 1
-      ECoverage[ecc,poll,pcov,area,year] = 0.0
+      for ecc in eccs
+        if ECCMarket[ecc,market,year] == 1
+          for poll in polls
+            ECoverage[ecc,poll,pcov,area,year] = 0.0
+          end
+        end
+      end
     end
   end
   WriteDisk(db,"SInput/ECoverage",ECoverage)
@@ -333,6 +344,13 @@ function ElecPolicy(db)
   #
   FacSw[market] = 1
   WriteDisk(db,"SInput/FacSw",FacSw)
+  
+  #
+  # Electric Utility Gratis Permits are Output Based (GPEUSw=4)
+  #
+  # TODO fix GPEUSw to be dimensioned by market on the database.
+  GPEUSw[market]=4
+  WriteDisk(db,"SInput/GPEUSw",GPEUSw)
 
   #
   # Emissions goal base on Gratis Permits (GoalPolSw=1)
@@ -408,7 +426,7 @@ function ElecPolicy(db)
   #
   # Emissions Intensity from Baseline
   #
-  years = collect(Yr(2016):Yr(2018))
+  years = collect(Yr(2014):Yr(2016))
   for area in areas, pcov in PCovs, poll in polls, ecc in eccs
     @finite_math EIBase[ecc,poll,pcov,area] = sum(PolTotRef[ecc,poll,pcov,area,year]*
       PolConv[poll]*ECoverage[ecc,poll,pcov,area,YrFinal] for year in years)/
@@ -417,7 +435,7 @@ function ElecPolicy(db)
   areas,eccs,pcovs,polls,years = 
     DefaultSets(data,AreaMarket,Current,ECCMarket,market,PCovMarket,PollMarket,YrFinal)
 
-  for year in years, area in areas, pcov in PCovs, poll in polls, ecc in eccs
+  for year in years, area in areas, pcov in pcovs, poll in polls, ecc in eccs
     EIBaseline[ecc,poll,pcov,area,year] = EIBase[ecc,poll,pcov,area]
   end
 
@@ -427,6 +445,7 @@ function ElecPolicy(db)
   #
   # OBA Fraction
   #
+  years = collect(Yr(2019):Yr(2022))
   for year in years, area in areas, ecc in eccs
     OBAFraction[ecc,area,year] = 0.95
   end
@@ -488,6 +507,9 @@ function ElecPolicy(db)
   CO2 = Select(Poll,"CO2")
   Energy = Select(PCov,"Energy")
   years = collect(Current:YrFinal)
+  #
+  # Plant Types which may burn Oil or Natural gas
+  #
 
   plants = Select(Plant,["OGCT","OGCC","SmallOGCC","NGCCS","OGSteam"])
   for year in years, fuelep in FuelEPs, plant in plants
@@ -509,7 +531,7 @@ function ElecPolicy(db)
   #
   # New Natural Gas Units
   #
-  # plants = Select(Plant,["OGCT","OGCC","SmallOGCC","NGCCS"])
+  plants = Select(Plant,["OGCT","OGCC","SmallOGCC","NGCCS"])
   years = collect(Yr(2019):Yr(2021))
   for year in years 
     OBANaturalGasNew[year] = 370.0
@@ -662,14 +684,14 @@ function ElecPolicy(db)
 
   plants = Select(Plant,["OGCT","OGCC","SmallOGCC","NGCCS","OGSteam"])
   NaturalGas = Select(FuelEP,"NaturalGas")
-  for year in years, area in areas, plant in plants
+  for year in years,area in areas,plant in plants
     xGPNew[NaturalGas,plant,CO2,area,year] = OBANaturalGasNew[year]
   end
+  areas,eccs,pcovs,polls,years = 
+    DefaultSets(data,AreaMarket,Current,ECCMarket,market,PCovMarket,PollMarket,YrFinal)
 
   WriteDisk(db,"EGInput/xGPNew",xGPNew)
 
-  areas,eccs,pcovs,polls,years = 
-    DefaultSets(data,AreaMarket,Current,ECCMarket,market,PCovMarket,PollMarket,YrFinal)
 
   #########################
   #
@@ -740,7 +762,7 @@ function ElecPolicy(db)
   # ETADAP[market,Yr(2019)] = 20.00/xExchangeRateNation[CN,Yr(2019)]/xInflationNation[US,Yr(2019)]
   # ETADAP[market,Yr(2020)] = 30.00/xExchangeRateNation[CN,Yr(2020)]/xInflationNation[US,Yr(2020)]
   # ETADAP[market,Yr(2021)] = 40.00/xExchangeRateNation[CN,Yr(2021)]/xInflationNation[US,Yr(2021)]
-  ETADAP[market,Yr(2022)] = 50.00/xExchangeRateNation[CN,Yr(2022)]/xInflationNation[US,Yr(2022)]
+  # ETADAP[market,Yr(2022)] = 50.00/xExchangeRateNation[CN,Yr(2022)]/xInflationNation[US,Yr(2022)]
   ETADAP[market,Yr(2023)] = 65.00/xExchangeRateNation[CN,Yr(2023)]/xInflationNation[US,Yr(2023)]
   ETADAP[market,Yr(2024)] = 80.00/xExchangeRateNation[CN,Yr(2024)]/xInflationNation[US,Yr(2024)]
   ETADAP[market,Yr(2025)] = 95.00/xExchangeRateNation[CN,Yr(2025)]/xInflationNation[US,Yr(2025)]
@@ -838,7 +860,7 @@ function ElecPolicy(db)
 end
 
 function PolicyControl(db)
-  @info "CarbonTax_OBA_SK.jl - PolicyControl"
+  @info "Policies/CarbonTax_OBA_SK.jl - PolicyControl"
   ElecPolicy(db)
 end
 
