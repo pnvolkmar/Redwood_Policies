@@ -492,7 +492,10 @@ function ElecPolicy(db)
   CO2 = Select(Poll,"CO2")
   Energy = Select(PCov,"Energy")
   years = collect(Current:YrFinal)
-  
+  #
+  # Plant Types which may burn Oil or Natural gas
+  #
+    
   plants = Select(Plant,["OGCT","OGCC","SmallOGCC","NGCCS","OGSteam"])
   for fuelep in FuelEPs, plant in plants
     OBAElectric[plant,fuelep,Yr(2019)] = 800.0
@@ -742,7 +745,7 @@ function ElecPolicy(db)
   # ETADAP[market,Yr(2019)] = 20.00/xExchangeRateNation[CN,Yr(2019)]/xInflationNation[US,Yr(2019)]
   # ETADAP[market,Yr(2020)] = 30.00/xExchangeRateNation[CN,Yr(2020)]/xInflationNation[US,Yr(2020)]
   # ETADAP[market,Yr(2021)] = 40.00/xExchangeRateNation[CN,Yr(2021)]/xInflationNation[US,Yr(2021)]
-  ETADAP[market,Yr(2022)] = 50.00/xExchangeRateNation[CN,Yr(2022)]/xInflationNation[US,Yr(2022)]
+  # ETADAP[market,Yr(2022)] = 50.00/xExchangeRateNation[CN,Yr(2022)]/xInflationNation[US,Yr(2022)]
   ETADAP[market,Yr(2023)] = 65.00/xExchangeRateNation[CN,Yr(2023)]/xInflationNation[US,Yr(2023)]
   ETADAP[market,Yr(2024)] = 80.00/xExchangeRateNation[CN,Yr(2024)]/xInflationNation[US,Yr(2024)]
   ETADAP[market,Yr(2025)] = 95.00/xExchangeRateNation[CN,Yr(2025)]/xInflationNation[US,Yr(2025)]
