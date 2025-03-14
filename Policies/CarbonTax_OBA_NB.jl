@@ -1,5 +1,5 @@
 #
-# CarbonTax_OBA_NB.jl - Federal Carbon Tax with OBA for NB
+# Policies/CarbonTax_OBA_NB.jl - Federal Carbon Tax with OBA for NB
 #
 
 using SmallModel
@@ -667,7 +667,7 @@ function ElecPolicy(db)
   #
   # plants = Select(Plant,["OGCT","OGCC","SmallOGCC","NGCCS","OGSteam"])
   # NaturalGas = Select(FuelEP,"NaturalGas")
-  # for year in years,area in areas, plant in plants
+  # for year in years,area in areas,plant in plants
   #   xGPNew[NaturalGas,plant,CO2,area,year] = OBANaturalGasNew[year]
   # end
   # areas,eccs,pcovs,polls,years = 
