@@ -716,7 +716,7 @@ function ElecPolicy(db)
 
   #########################
   #
-  # Emission Credits are energy (xPolCap
+  # Emission Credits are energy (xPolCap)
   #
   for year in years, area in areas, pcov in pcovs, poll in polls, ecc in eccs
     xPGratis[ecc,poll,pcov,area,year] = xPolCap[ecc,poll,pcov,area,year]

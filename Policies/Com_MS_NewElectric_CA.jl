@@ -69,11 +69,9 @@ function ComPolicy(db)
     xMMSF[Heat,HeatPump,ec,CA,year] = 1.0
   end
   
-  for year in years, ec in ECs, tech in Techs
-    if tech != "HeatPump"
-      xMMSF[Heat,tech,ec,CA,year] = 0.0
-    end
-    
+  techs = Select(Tech,!=("HeatPump"))
+  for year in years, ec in ECs, tech in techs
+    xMMSF[Heat,tech,ec,CA,year] = 0.0    
   end
   
   #

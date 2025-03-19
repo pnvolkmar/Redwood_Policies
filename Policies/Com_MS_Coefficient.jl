@@ -84,12 +84,24 @@ function InputData(data::CControl)
   (; Areas,ECs) = data
   (; Enduses) = data
   (; Techs,Years) = data
-  (; MCFUBase,PEE,PEMBase,PEMM,PEPM,PEStd) = data
-  (; PEStdP,PFPN,PFTC,xInflation) = data
+  (; MCFUBase,PEE,PEStd) = data
+  (; xInflation) = data
 
   #
   # Policy Case Values
   #  
+
+  
+end
+
+function MarketShareNonPriceFactors(data::CControl)
+  (; CalDB,db) = data
+  (; Areas,ECs,Enduses,Techs,Years) = data
+  (; Inflation0,MAW,MCFUBase,MCFU0Base) = data
+  (; MMSF,MMSFx,MMSM0,MSMM,MU,MVF) = data
+  (; PEE,PEMBase,PEE0Base,PEMM,PEPM,PFPN,PEStdP,PFTC,xInflation,xMMSF,PEStd) = data
+
+  InputData(data)
   for enduse in Enduses, tech in Techs, ec in ECs, area in Areas, year in Years
     @finite_math PEE[enduse,tech,ec,area,year] = max(PEMBase[enduse,ec,area]*
       PEMM[enduse,tech,ec,area,year]*(1/(1+(MCFUBase[enduse,tech,ec,area,year]/
@@ -97,22 +109,13 @@ function InputData(data::CControl)
           PFPN[enduse,tech,ec,area])^PFTC[enduse,tech,ec,area,year])),
             PEStd[enduse,tech,ec,area,year],PEStdP[enduse,tech,ec,area,year]) 
   end
-  
-end
-
-function MarketShareNonPriceFactors(data::CControl)
-  (; CalDB,db) = data
-  (; Areas,ECs,Enduses,Techs) = data
-  (; Inflation0,MAW,MCFUBase,MCFU0Base) = data
-  (; MMSF,MMSFx,MMSM0,MSMM,MU,MVF) = data
-  (; PEE,PEE0Base,xInflation,xMMSF) = data
-
-  InputData(data)
-
   years = collect(Future:Final)
 
   for year in years
     for enduse in Enduses, ec in ECs, area in Areas
+      if enduse == 6 && ec == 4 && area == 2 && year == 39
+        @info "xMMSF[enduse,:,ec,area,year] = $(xMMSF[enduse,:,ec,area,year]))"
+      end
 
       xMMSFMax = maximum(xMMSF[enduse,:,ec,area,year])
       if xMMSFMax > 0.0
@@ -167,7 +170,11 @@ function MarketShareNonPriceFactors(data::CControl)
         #        
         LogFails = 1e-5
         for tech in Techs
-          if MU[tech]/MUmax < LogFails
+          if tech == 1 && enduse == 6 && ec == 4 && area == 2 && year == 39
+            @info "MUmax = $MUmax"
+            @info "MU = $MU[tech]"
+          end
+          if MU[tech] < LogFails
             MMSM0[enduse,tech,ec,area,year] = -170.39
           end
           
@@ -186,6 +193,11 @@ function MarketShareNonPriceFactors(data::CControl)
       
       else
         for tech in Techs
+          if tech == 1 && enduse == 6 && ec == 4 && area == 2 && year == 39
+            loc1 = MMSM0[enduse,tech,ec,area,year-1]
+            @info "MMSM0[enduse,tech,ec,area,year-1] = $loc1"
+          end
+
           MMSM0[enduse,tech,ec,area,year] = MMSM0[enduse,tech,ec,area,year-1]
         end
         
